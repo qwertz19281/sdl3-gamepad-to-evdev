@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::slice;
 
 use serde::Deserialize;
 
@@ -7,8 +8,10 @@ pub struct Config {
     pub input_gamepad: InputGamepad,
     pub simulate_gamepad: SimulateGamepad,
     pub behavior: Behavior,
-    pub button_map: HashMap<String,ButtonMapping>,
-    pub axis_map: HashMap<String,AxisMapping>,
+    pub button_map: HashMap<String,ButtonMappingEnum>,
+    pub axis_map: HashMap<String,AxisMappingEnum>,
+    #[serde(default)]
+    pub sdl_hints: HashMap<String,String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -16,9 +19,13 @@ pub struct InputGamepad {
     #[serde(default)]
     pub filter_name: Option<String>,
     #[serde(default)]
-    pub filter_vendor_id: Option<u16>,
+    pub filter_vendor_id: VendorProductIds,
     #[serde(default)]
-    pub filter_product_id: Option<u16>,
+    pub filter_product_id: VendorProductIds,
+    #[serde(default)]
+    pub filter_product_version: VendorProductIds,
+    #[serde(default)]
+    pub wait_timeout_ms: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,39 +52,45 @@ pub struct Behavior {
     pub dpad_to_hat0: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
-pub enum ButtonMapping {
+pub enum ButtonMappingEnum {
     Code(StringOrU16),
-    Advanced {
-        key: StringOrU16,
-        #[serde(default)]
-        dpad: bool,
-    }
+    Advanced(ButtonMapping),
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum AxisMapping {
-    Code(StringOrU16),
-    Advanced {
-        key: StringOrU16,
-        #[serde(default)]
-        from_range: Option<[i32;2]>,
-        #[serde(default)]
-        to_range: Option<[i32;2]>,
-        #[serde(default)]
-        offset: i32,
-        #[serde(default)]
-        fuzz: Option<i32>,
-        #[serde(default)]
-        flat: Option<i32>,
-        #[serde(default)]
-        res: Option<i32>,
-    }
+#[derive(Clone, Debug, Deserialize)]
+pub struct ButtonMapping {
+    pub key: StringOrU16,
+    #[serde(default)]
+    pub dpad: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum AxisMappingEnum {
+    Code(StringOrU16),
+    Advanced(AxisMapping),
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct AxisMapping {
+    pub key: StringOrU16,
+    #[serde(default)]
+    pub from_range: Option<[i32;3]>,
+    #[serde(default)]
+    pub to_range: Option<[i32;3]>,
+    #[serde(default)]
+    pub out_range: Option<[i32;2]>,
+    #[serde(default)]
+    pub fuzz: Option<i32>,
+    #[serde(default)]
+    pub flat: Option<i32>,
+    #[serde(default)]
+    pub res: Option<i32>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 pub enum StringOrU16 {
     String(String),
@@ -86,4 +99,70 @@ pub enum StringOrU16 {
 
 fn default_true() -> bool {
     true
+}
+
+impl ButtonMappingEnum {
+    pub fn mapping(&self) -> ButtonMapping {
+        match self {
+            Self::Code(key) => ButtonMapping {
+                key: key.clone(),
+                dpad: false,
+            },
+            Self::Advanced(button_mapping) => button_mapping.clone(),
+        }
+    }
+}
+
+impl AxisMappingEnum {
+    pub fn mapping(&self) -> AxisMapping {
+        match self {
+            Self::Code(key) => AxisMapping {
+                key: key.clone(),
+                from_range: None,
+                to_range: None,
+                out_range: None,
+                fuzz: None,
+                flat: None,
+                res: None,
+            },
+            Self::Advanced(axis_mapping) => axis_mapping.clone(),
+        }
+    }
+}
+
+impl From<u16> for StringOrU16 {
+    fn from(value: u16) -> Self {
+        StringOrU16::U16(value)
+    }
+}
+
+impl From<String> for StringOrU16 {
+    fn from(value: String) -> Self {
+        StringOrU16::String(value)
+    }
+}
+
+impl From<&str> for StringOrU16 {
+    fn from(value: &str) -> Self {
+        StringOrU16::String(value.to_owned())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Default)]
+#[serde(untagged)]
+pub enum VendorProductIds {
+    Single(u16),
+    Vec(Vec<u16>),
+    #[default]
+    Empty,
+}
+
+impl VendorProductIds {
+    pub fn slice(&self) -> &[u16] {
+        match self {
+            Self::Single(v) => slice::from_ref(v),
+            Self::Vec(v) => v,
+            Self::Empty => &[],
+        }
+    }
 }
