@@ -18,8 +18,9 @@ pub struct ParsedButtonBinding {
 
 pub struct ParsedAxisBinding {
     pub setup: UinputAbsSetup,
-    pub numerator: i32,
-    pub denominator: i32,
+    pub neg_fraction: [i64;2],
+    pub pos_fraction: [i64;2],
+    pub offset: i32,
 }
 
 fn parse_button_binding(v: &ButtonMapping, exclude_dpad: bool) -> anyhow::Result<Option<ParsedButtonBinding>> {
@@ -50,31 +51,14 @@ fn parse_axis_binding(v: &AxisMapping, i: &SimulateGamepad) -> anyhow::Result<Pa
     let mut fuzz_ = i.default_axis_fuzz.unwrap_or(0);
     let mut flat_ = i.default_axis_flat.unwrap_or(0);
     let mut res_ = i.default_axis_res.unwrap_or(0);
+    let mut pos_fraction = [32767,32767];
+    let mut neg_fraction = [-32768,-32768];
+    let mut offset_ = 0;
 
     match v {
         AxisMapping::Code(axis) => code = match_axis_code(axis)?,
-        AxisMapping::Advanced { key: axis, numerator, denominator, invert, min, max, fuzz, flat, res } => {
+        AxisMapping::Advanced { key: axis, from_range, to_range, offset, fuzz, flat, res } => {
             code = match_axis_code(axis)?;
-            numer = numerator.unwrap_or(1);
-            denom = denominator.unwrap_or(1);
-            if let Some(v) = numerator {
-                numer = *v;
-            }
-            if let Some(v) = denominator {
-                denom = *v;
-            }
-            if denom == 0 {
-                bail!("denominator must not be zero");
-            }
-            if *invert {
-                denom = denom.checked_neg().context("nominator overflow")?;
-            }
-            if let Some(v) = min {
-                min_ = *v;
-            }
-            if let Some(v) = max {
-                max_ = *v;
-            }
             if let Some(v) = fuzz {
                 fuzz_ = *v;
             }
@@ -84,6 +68,17 @@ fn parse_axis_binding(v: &AxisMapping, i: &SimulateGamepad) -> anyhow::Result<Pa
             if let Some(v) = res {
                 res_ = *v;
             }
+            offset_ = *offset;
+            let from_range = from_range.unwrap_or([-32768,32767]);
+            let to_range = to_range.unwrap_or([-32768,32767]);
+            if !(from_range[0] <= 0 && from_range[1] >= 0) {
+                bail!("from_range must be from <= 0 to >= 0");
+            }
+            if !((to_range[0] <= 0 && to_range[1] >= 0) || (to_range[0] >= 0 && to_range[1] <= 0)) {
+                bail!("to_range must be either from <= 0 to >= 0 OR from >= 0 to <= 0 (for inverting)");
+            }
+            pos_fraction = [from_range[1], to_range[1]];
+            neg_fraction = [from_range[0], to_range[0]];
         },
     }
 

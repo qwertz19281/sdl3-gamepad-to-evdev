@@ -63,15 +63,11 @@ pub enum AxisMapping {
     Advanced {
         key: StringOrU16,
         #[serde(default)]
-        numerator: Option<i32>,
+        from_range: Option<[i32;2]>,
         #[serde(default)]
-        denominator: Option<i32>,
+        to_range: Option<[i32;2]>,
         #[serde(default)]
-        invert: bool,
-        #[serde(default)]
-        min: Option<i32>,
-        #[serde(default)]
-        max: Option<i32>,
+        offset: i32,
         #[serde(default)]
         fuzz: Option<i32>,
         #[serde(default)]
