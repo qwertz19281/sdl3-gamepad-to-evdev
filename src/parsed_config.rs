@@ -8,12 +8,13 @@ use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 
 use crate::config::{AxisMappingEnum, ButtonMappingEnum, Config, SimulateGamepad, StringOrU16};
 
+#[derive(Debug)]
 pub struct ParsedConfig {
     pub button_bindings: ParsedButtonBindings,
     pub axis_bindings: ParsedAxisBindings,
     pub evdev_bus_type: BusType,
     pub additional_axes: Vec<UinputAbsSetup>,
-    pub button_lut: Vec<Option<KeyCode>>,
+    pub button_lut: Vec<u16>,
     pub axis_lut: Vec<Option<Box<ParsedAxisBinding>>>,
 }
 
@@ -45,16 +46,15 @@ impl ParsedConfig {
         let axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, axis_exclusions)?;
 
         let max_button_id = button_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadButton::COUNT.0);
-        let mut button_lut = vec![const {None}; max_button_id as _];
+        let mut button_lut = vec![u16::MAX; max_button_id as _];
 
         for (k,v) in &button_bindings {
             if k.to_ll().0 >= 0 {
-                button_lut[k.to_ll().0 as usize] = Some(v.code);
+                button_lut[k.to_ll().0 as usize] = v.code.0;
             }
         }
 
         let max_axis_id = axis_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadAxis::COUNT.0);
-        const NONE_ITEM: Option<ParsedAxisBinding> = None;
         let mut axis_lut = std::iter::repeat_with(|| None).take(max_axis_id as _).collect::<Vec<_>>();
 
         for (k,v) in &axis_bindings {
@@ -77,18 +77,19 @@ impl ParsedConfig {
 pub type ParsedButtonBindings = HashMap<Button,ParsedButtonBinding>;
 pub type ParsedAxisBindings = HashMap<Axis,ParsedAxisBinding>;
 
+#[derive(Debug)]
 pub struct ParsedButtonBinding {
     pub code: KeyCode,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ParsedAxisBinding {
     pub setup: UinputAbsSetup,
     pub in_off: i64,
     pub out_off: i64,
     pub neg_fraction: [i64;2],
     pub pos_fraction: [i64;2],
-    pub clamp_out: [i64;2],
+    pub clamp_out: [i32;2],
     pub out_range: [i32;2],
 }
 
@@ -116,7 +117,8 @@ fn parse_axis_bindings(cfg: &HashMap<String,AxisMappingEnum>, sg: &SimulateGamep
 
     for (k,v) in cfg {
         let key = match_sdl_axis(&StringOrU16::String(k.clone()))?;
-        let binding: ParsedAxisBinding = parse_axis_binding(v, sg).with_context(|| format!("parsing axis binding for {k}"))?;
+        let absolute = key.string().to_lowercase().contains("trigger");
+        let binding: ParsedAxisBinding = parse_axis_binding(v, sg, absolute).with_context(|| format!("parsing axis binding for {k}"))?;
 
         if !exclusions.insert(AbsoluteAxisCode(binding.setup.code())) {
             bail!("{k} adds duplicate output key {:?}, which is (currently) not supported", AbsoluteAxisCode(binding.setup.code()));
@@ -140,22 +142,24 @@ pub fn parse_button_binding(cfg: &ButtonMappingEnum, exclude_dpad: bool) -> anyh
     }))
 }
 
-pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad) -> anyhow::Result<ParsedAxisBinding> {
+pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: bool) -> anyhow::Result<ParsedAxisBinding> {
     let cfg = cfg.mapping();
 
     let code = match_axis_code(&cfg.key)?;
 
+    let min = if absolute {0} else {-32768};
+
     let fuzz = cfg.fuzz.or(i.default_axis_fuzz).unwrap_or(0);
     let flat = cfg.flat.or(i.default_axis_flat).unwrap_or(0);
     let res = cfg.res.or(i.default_axis_res).unwrap_or(0);
-    let [min,max] = cfg.out_range.unwrap_or([-32768,32767]);
+    let [min,max] = cfg.out_range.unwrap_or([min,32767]);
 
     if max < min {
         bail!("axis out_range must be smaller or equal number first");
     }
 
-    let [ia,ib,ic] = cfg.from_range.unwrap_or([-32768,0,32767]);
-    let [oa,ob,oc] = cfg.from_range.unwrap_or([-32768,0,32767]);
+    let [ia,ib,ic] = cfg.from_range.unwrap_or([min,0,32767]);
+    let [oa,ob,oc] = cfg.from_range.unwrap_or([min,0,max]);
 
     if !(ia <= ib && ib <= ic) {
         bail!("axis from_range must not be decrementing order");
@@ -169,18 +173,19 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad) -> anyhow:
     // if > ib, use pos_transform
     let neg_fraction = [
         (ob - oa) as i64,
-        (ib - ia) as i64,
+        (ib - ia).max(1) as i64,
     ];
     let pos_fraction = [
         (oc - ob) as i64,
-        (ic - ib) as i64,
+        (ic - ib).max(1) as i64,
     ];
     let in_off = ib as i64;
     let out_off = ob as i64;
+
     
     let clamp_out = [
-        min.max(oa.min(oc)) as i64,
-        max.min(oa.max(oc)) as i64,
+        min.max(oa.min(oc)),
+        max.min(oa.max(oc)),
     ];
 
     Ok(ParsedAxisBinding {
@@ -199,7 +204,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad) -> anyhow:
 
 fn match_sdl_button(id: &StringOrU16) -> anyhow::Result<Button> {
     match id {
-        StringOrU16::String(v) => match Button::from_string(&v) {
+        StringOrU16::String(v) => match match_sdl_button_string(&v) {
             Some(v) => Ok(v),
             None => bail!("Unknown SDL3 button id: {v}"),
         },
@@ -212,7 +217,7 @@ fn match_sdl_button(id: &StringOrU16) -> anyhow::Result<Button> {
 
 fn match_sdl_axis(id: &StringOrU16) -> anyhow::Result<Axis> {
     match id {
-        StringOrU16::String(v) => match Axis::from_string(&v) {
+        StringOrU16::String(v) => match match_sdl_axis_string(&v) {
             Some(v) => Ok(v),
             None => bail!("Unknown SDL3 axis id: {v}"),
         },
@@ -225,9 +230,10 @@ fn match_sdl_axis(id: &StringOrU16) -> anyhow::Result<Axis> {
 
 fn match_key_code(id: &StringOrU16) -> anyhow::Result<KeyCode> {
     match id {
-        StringOrU16::String(v) => match KeyCode::from_str(v) {
-            Ok(v) => Ok(v),
-            Err(e) => bail!("Unknown udev KeyCode: {v}: {e}"),
+        StringOrU16::String(v) => match match_key_code_string(v) {
+            Some(v) if v.0 == u16::MAX => bail!("udev KeyCode not supported"),
+            Some(v) => Ok(v),
+            None => bail!("Unknown udev KeyCode: {v}"),
         },
         StringOrU16::U16(v) => Ok(KeyCode::from_index(*v as _)),
     }
@@ -235,9 +241,9 @@ fn match_key_code(id: &StringOrU16) -> anyhow::Result<KeyCode> {
 
 fn match_axis_code(id: &StringOrU16) -> anyhow::Result<AbsoluteAxisCode> {
     match id {
-        StringOrU16::String(v) => match AbsoluteAxisCode::from_str(v) {
-            Ok(v) => Ok(v),
-            Err(e) => bail!("Unknown udev AbsoluteAxisCode: {v}: {e}"),
+        StringOrU16::String(v) => match match_axis_code_string(v) {
+            Some(v) => Ok(v),
+            None => bail!("Unknown udev AbsoluteAxisCode: {v}"),
         },
         StringOrU16::U16(v) => Ok(AbsoluteAxisCode::from_index(*v as _)),
     }
@@ -247,8 +253,68 @@ pub(super) fn match_bus_type(id: &StringOrU16) -> anyhow::Result<BusType> {
     match id {
         StringOrU16::String(v) => match BusType::from_str(v) {
             Ok(v) => Ok(v),
-            Err(e) => bail!("Unknown udev BusType: {v}: {e}"),
+            Err(e) => bail!("Unknown udev BusType: {v}: {e:#}"),
         },
         StringOrU16::U16(v) => Ok(BusType::from_index(*v as _)),
     }
+}
+
+fn match_key_code_string(id: &str) -> Option<KeyCode> {
+    KeyCode::from_str(id).ok().or_else(||
+        KeyCode::from_str(&format!("BTN_{}", id.to_uppercase())).ok()
+    )
+}
+
+fn match_axis_code_string(id: &str) -> Option<AbsoluteAxisCode> {
+    AbsoluteAxisCode::from_str(id).ok().or_else(||
+        AbsoluteAxisCode::from_str(&format!("ABS_{}", id.to_uppercase())).ok()
+    )
+}
+
+fn match_sdl_button_string(id: &str) -> Option<Button> {
+    let id_lc = id.replace(['_',' '], "").to_lowercase();
+
+    Some(match &*id_lc {
+        "north" | "n" => Button::North,
+        "east" | "e" => Button::East,
+        "south" | "s" => Button::South,
+        "west" | "w" => Button::West,
+        "back" | "select" => Button::Back,
+        "guide" | "steam" => Button::Guide,
+        "start" => Button::Start,
+        "leftstick" | "l3" => Button::LeftStick,
+        "rightstick" | "r3" => Button::RightStick,
+        "leftshoulder" | "l1"  => Button::LeftShoulder,
+        "rightshoulder" | "r1" => Button::RightShoulder,
+        "dpadup" | "dpadu" | "dpu" => Button::DPadUp,
+        "dpaddown" | "dpadd" | "dpd" => Button::DPadDown,
+        "dpadleft" | "dpadl" | "dpl" => Button::DPadLeft,
+        "dpadright" | "dpadr" | "dpr" => Button::DPadRight,
+        "misc1" => Button::Misc1,
+        "misc2" => Button::Misc2,
+        "misc3" => Button::Misc3,
+        "misc4" => Button::Misc4,
+        "misc5" => Button::Misc5,
+        "misc6" => Button::Misc6,
+        "rightpaddle1" => Button::RightPaddle1,
+        "leftpaddle1" => Button::LeftPaddle1,
+        "rightpaddle2" => Button::RightPaddle2,
+        "leftpaddle2" => Button::LeftPaddle2,
+        "touchpad" => Button::Touchpad,
+        _ => return Button::from_string(id)
+    })
+}
+
+fn match_sdl_axis_string(id: &str) -> Option<Axis> {
+    let id_lc = id.replace(['_',' '], "").to_lowercase();
+
+    Some(match &*id_lc {
+        "leftx" | "lx" => Axis::LeftX,
+        "rightx" | "rx" => Axis::RightX,
+        "lefty" | "ly" => Axis::LeftY,
+        "righty" | "ry" => Axis::RightY,
+        "triggerleft" | "lefttrigger" | "ltrigger" | "triggerl" | "tl" | "lt" | "l2" => Axis::TriggerLeft,
+        "triggerright" | "righttrigger" | "rtrigger" | "triggerr" | "tr" | "rt" | "r2" => Axis::TriggerRight,
+        _ => return Axis::from_string(id)
+    })
 }

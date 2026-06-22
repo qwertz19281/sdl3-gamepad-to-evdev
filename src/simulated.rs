@@ -48,6 +48,11 @@ impl SimulatedGamepad {
             builder = builder.with_absolute_axis(&v.setup)?;
         }
 
+        for v in &parsed.additional_axes {
+            builder = builder.with_absolute_axis(v)?;
+        }
+
+
         let dev = builder.build()?;
 
         Ok(SimulatedGamepad {

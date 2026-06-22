@@ -44,11 +44,13 @@ impl ButtonTracker {
         if self.dirty_hatx {
             self.dirty_hatx = false;
             let evdev_event = InputEvent::new(evdev::EventType::ABSOLUTE.0, AbsoluteAxisCode::ABS_HAT0X.0, self.hatx);
+            //eprintln!("hatter x {evdev_event:?}");
             queue.push(evdev_event);
         }
         if self.dirty_haty {
             self.dirty_haty = false;
             let evdev_event = InputEvent::new(evdev::EventType::ABSOLUTE.0, AbsoluteAxisCode::ABS_HAT0Y.0, self.haty);
+            //eprintln!("hatter x {evdev_event:?}");
             queue.push(evdev_event);
         }
     }

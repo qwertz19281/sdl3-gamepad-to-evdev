@@ -1,15 +1,17 @@
 use anyhow::Context;
+use evdev::InputEvent;
 use sdl3::gamepad::Gamepad;
 use sdl3::sensor::SensorType;
 use sdl3::{EventPump, GamepadSubsystem, Sdl};
 use sdl3::event::Event;
 use sdl3_sys::joystick::SDL_JoystickID;
 
+use crate::button_tracker::ButtonTracker;
 use crate::config::Config;
 use crate::parsed_config::ParsedConfig;
 use crate::simulated::SimulatedGamepad;
 
-pub fn main(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
+pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
     sdl3::hint::set("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
 
     for (k, v) in &cfg.sdl_hints {
@@ -29,6 +31,7 @@ pub fn main(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         exit: false,
         output: None,
         input: None,
+        tracker: ButtonTracker::default(),
     };
 
     eprintln!("SDL initialized");
@@ -63,6 +66,7 @@ struct LoopState<'a> {
     output: Option<SimulatedGamepad>,
     cfg: &'a Config,
     parsed_config: &'a ParsedConfig,
+    tracker: ButtonTracker,
 }
 
 impl LoopState<'_> {
@@ -132,6 +136,7 @@ impl LoopState<'_> {
 
                         let out = SimulatedGamepad::create(self.cfg, self.parsed_config)?;
 
+                        // Disable currently not supported sensors to maybe reduce gamepad battery usage
                         let _ = v.sensor_set_enabled(SensorType::AccelerometerLeft, false);
                         let _ = v.sensor_set_enabled(SensorType::AccelerometerRight, false);
                         let _ = v.sensor_set_enabled(SensorType::GyroscopeLeft, false);
@@ -141,9 +146,13 @@ impl LoopState<'_> {
 
                         self.input = Some((id, v));
                         self.output = Some(out);
+
+                        self.tracker = ButtonTracker::default();
+
+                        eprintln!("Opened gamepad {formatted_name}");
                     },
                     Ok(None) => eprintln!("Ignore gamepad {formatted_name}"),
-                    Err(e) => eprintln!("Failed to open gamepad {formatted_name}: {e}"),
+                    Err(e) => eprintln!("Failed to open gamepad {formatted_name}: {e:#}"),
                 }
 
             }
@@ -156,6 +165,52 @@ impl LoopState<'_> {
             Event::Quit { .. } => {
                 eprintln!("Quitting");
                 self.exit = true;
+            }
+            Event::ControllerButtonDown { timestamp, which, button } | Event::ControllerButtonUp { timestamp, which, button } => {
+                if
+                    self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
+                    && let Some(out) = &mut self.output
+                {
+                    let down = matches!(event, Event::ControllerButtonDown { .. });
+
+                    let mapping = self.parsed_config.button_lut
+                        .get(button.to_ll().0 as usize)
+                        .copied()
+                        .filter(|&c| c != u16::MAX );
+
+                    if let Some(m) = mapping {
+                        let evdev_event = InputEvent::new(evdev::EventType::KEY.0, m, down as _);
+                        out.queue.push(evdev_event);
+                    }
+
+                    if self.cfg.behavior.dpad_to_hat0 {
+                        self.tracker.track(button, down);
+                        self.tracker.submit_to_evdev(&mut out.queue);
+                    }
+                }
+            }
+            Event::ControllerAxisMotion { timestamp, which, axis, value } => {
+                if
+                    self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
+                    && let Some(out) = &mut self.output
+                {
+                    let mapping = self.parsed_config.axis_lut
+                        .get(axis.to_ll().0 as usize)
+                        .and_then(|v| v.as_deref() );
+
+                    if let Some(m) = mapping {
+                        let mut scaled = value as i64 - m.in_off;
+                        if scaled > 0 {
+                            scaled = scaled * m.pos_fraction[0] / m.pos_fraction[1];
+                        } else if scaled < 0 {
+                            scaled = scaled * m.neg_fraction[0] / m.neg_fraction[1];
+                        }
+                        let scaled = (scaled + m.out_off).clamp(m.clamp_out[0] as i64, m.clamp_out[1] as i64) as i32;
+
+                        let evdev_event = InputEvent::new(evdev::EventType::ABSOLUTE.0, m.setup.code(), scaled);
+                        out.queue.push(evdev_event);
+                    }
+                }
             }
             _ => {}
         }

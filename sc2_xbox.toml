@@ -1,0 +1,51 @@
+[input_gamepad]
+#filter_name = "Steam Controller"
+# 0x28DE (valve)
+filter_vendor_id = 0x28DE
+# 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+filter_product_id = [0x1304,0x1302,0x1303]
+
+[simulate_gamepad]
+name = "Microsoft X-Box 360 pad"
+vendor_id = 0x045E
+product_id = 0x028E
+version = 0x114
+
+[behavior]
+dpad_to_dpad = false
+dpad_to_hat0 = true
+
+[sdl_hints]
+SDL_JOYSTICK_LINUX_DEADZONES = "1"
+
+[button_map]
+"south" = "south"
+"east" = "east"
+"north" = "north"
+"west" = "west"
+"dpad_down" = { key = "dpad_down", dpad = true }
+"dpad_up" = { key = "dpad_up", dpad = true }
+"dpad_left" = { key = "dpad_left", dpad = true }
+"dpad_right" = { key = "dpad_right", dpad = true }
+"start" = "start"
+"back" = "select"
+"left_shoulder" = "tl"
+"right_shoulder" = "tr"
+"left_stick" = "thumbl"
+"right_stick" = "thumbr"
+# steam button
+"guide" = "mode"
+# quick access button
+"misc1" = "base"
+"left_paddle1" = "trigger_happy1"
+"right_paddle1" = "trigger_happy2"
+"left_paddle2" = "trigger_happy3"
+"right_paddle2" = "trigger_happy4"
+
+[axis_map]
+"left_trigger" = "z"
+"right_trigger" = "rz"
+"leftx" = "x"
+"rightx" = "rx"
+"lefty" = "y"
+"righty" = "ry"
