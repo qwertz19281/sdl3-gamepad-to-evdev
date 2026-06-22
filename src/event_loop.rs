@@ -1,11 +1,14 @@
 use anyhow::Context;
 use evdev::InputEvent;
 use sdl3::gamepad::Gamepad;
+use sdl3::joystick::{PowerInfo, PowerLevel};
 use sdl3::sensor::SensorType;
 use sdl3::{EventPump, GamepadSubsystem, Sdl};
 use sdl3::event::Event;
 use sdl3_sys::joystick::SDL_JoystickID;
+use sdl3_sys::timer::SDL_GetTicksNS;
 
+use crate::{FmtOpt, FmtOptHex};
 use crate::button_tracker::ButtonTracker;
 use crate::config::Config;
 use crate::parsed_config::ParsedConfig;
@@ -32,6 +35,9 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         output: None,
         input: None,
         tracker: ButtonTracker::default(),
+        tick: 0,
+        last_power_check: 0,
+        last_power_info: None,
     };
 
     eprintln!("SDL initialized");
@@ -41,12 +47,22 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
     loop {
         let event = ls.event_pump.wait_event_timeout_ms(wait_timeout_ms);
 
-        let Some(event) = event else {continue};
-
-        ls.process_event(event)?;
+        if let Some(event) = event {
+            ls.tick = event.get_timestamp();
+            ls.process_event(event)?;
+        } else {
+            ls.tick = unsafe { SDL_GetTicksNS() };
+        }
 
         if let Some(out) = &mut ls.output {
             out.submit()?;
+        }
+
+        if ls.parsed_config.power_refresh_interval != 0 && ls.tick >= ls.last_power_check + ls.parsed_config.power_refresh_interval {
+            if let Err(e) = ls.power_check() {
+                eprintln!("Failed to check gamepad power: {e:#}");
+            }
+            ls.last_power_check = ls.tick;
         }
 
         if ls.exit {
@@ -67,6 +83,9 @@ struct LoopState<'a> {
     cfg: &'a Config,
     parsed_config: &'a ParsedConfig,
     tracker: ButtonTracker,
+    tick: u64,
+    last_power_check: u64,
+    last_power_info: Option<(PowerLevel,i32)>,
 }
 
 impl LoopState<'_> {
@@ -84,10 +103,8 @@ impl LoopState<'_> {
 
                 let formatted_name = format!(
                     "{} ({}:{} ver. {})",
-                    name.as_deref().unwrap_or("??"),
-                    vendor.map_or_else(|| "??".to_owned(), |v| format!("{v:#06X}")),
-                    product.map_or_else(|| "??".to_owned(), |v| format!("{v:#06X}")),
-                    version.map_or_else(|| "??".to_owned(), |v| format!("{v:#06X}")),
+                    FmtOpt(name.as_deref().ok()),
+                    FmtOptHex(vendor), FmtOptHex(product), FmtOptHex(version)
                 );
 
                 let try_open = || -> anyhow::Result<Option<Gamepad>> {
@@ -149,15 +166,16 @@ impl LoopState<'_> {
 
                         self.tracker = ButtonTracker::default();
 
-                        eprintln!("Opened gamepad {formatted_name}");
+                        eprintln!("Opened gamepad: {formatted_name}");
                     },
-                    Ok(None) => eprintln!("Ignore gamepad {formatted_name}"),
-                    Err(e) => eprintln!("Failed to open gamepad {formatted_name}: {e:#}"),
+                    Ok(None) => eprintln!("Ignore gamepad: {formatted_name}"),
+                    Err(e) => eprintln!("Failed to open gamepad: {formatted_name}: {e:#}"),
                 }
 
             }
             Event::ControllerDeviceRemoved { timestamp, which } => {
                 if let Some((id, gp)) = &mut self.input && *id == which {
+                    eprintln!("Gamepad disconnected");
                     SimulatedGamepad::close(&mut self.output)?;
                     self.input = None;
                 }
@@ -215,6 +233,17 @@ impl LoopState<'_> {
             _ => {}
         }
 
+        Ok(())
+    }
+
+    fn power_check(&mut self) -> anyhow::Result<()> {
+        if let Some((_,gp)) = &self.input {
+            let PowerInfo { state, percentage } = gp.power_info();
+            if self.last_power_info != Some((state,percentage)) {
+                eprintln!("Battery: {}% ({:?})", percentage, state);
+            }
+            self.last_power_info = Some((state,percentage));
+        }
         Ok(())
     }
 }

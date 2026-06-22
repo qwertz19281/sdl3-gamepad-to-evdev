@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::Context;
 
 use crate::config::Config;
@@ -18,4 +20,26 @@ pub fn init(cfg: &Config) -> anyhow::Result<()> {
     eprintln!("\nParsed Config: {parsed_config:#?}\n");
 
     entry(cfg, &parsed_config)
+}
+
+struct FmtOpt<T>(Option<T>);
+
+impl<T> fmt::Display for FmtOpt<T> where T: fmt::Display {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Some(v) => write!(f, "{v}"),
+            None => write!(f, "??"),
+        }
+    }
+}
+
+struct FmtOptHex<T>(Option<T>);
+
+impl<T> fmt::Display for FmtOptHex<T> where T: fmt::UpperHex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Some(v) => write!(f, "{v:#06X}"),
+            None => write!(f, "??"),
+        }
+    }
 }

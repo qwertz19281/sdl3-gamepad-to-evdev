@@ -16,6 +16,7 @@ pub struct ParsedConfig {
     pub additional_axes: Vec<UinputAbsSetup>,
     pub button_lut: Vec<u16>,
     pub axis_lut: Vec<Option<Box<ParsedAxisBinding>>>,
+    pub power_refresh_interval: u64,
 }
 
 impl ParsedConfig {
@@ -62,7 +63,9 @@ impl ParsedConfig {
                 axis_lut[k.to_ll().0 as usize] = Some(Box::new(v.clone()));
             }
         }
-        
+
+        let power_refresh_interval= cfg.input_gamepad.power_refresh_interval.unwrap_or(5000) as u64 * 1_000_000;
+
         Ok(ParsedConfig {
             button_bindings,
             axis_bindings,
@@ -70,6 +73,7 @@ impl ParsedConfig {
             additional_axes,
             button_lut,
             axis_lut,
+            power_refresh_interval,
         })
     }
 }

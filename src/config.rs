@@ -26,6 +26,8 @@ pub struct InputGamepad {
     pub filter_product_version: VendorProductIds,
     #[serde(default)]
     pub wait_timeout_ms: Option<u32>,
+    #[serde(default)]
+    pub power_refresh_interval: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,6 +44,8 @@ pub struct SimulateGamepad {
     pub default_axis_flat: Option<i32>,
     #[serde(default)]
     pub default_axis_res: Option<i32>,
+    #[serde(default)]
+    pub keep_open_out_gamepad: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
