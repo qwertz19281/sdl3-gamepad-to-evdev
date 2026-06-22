@@ -210,7 +210,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
 
 fn match_sdl_button(id: &StringOrU16) -> anyhow::Result<Button> {
     match id {
-        StringOrU16::String(v) => match match_sdl_button_string(&v) {
+        StringOrU16::String(v) => match match_sdl_button_string(v) {
             Some(v) => Ok(v),
             None => bail!("Unknown SDL3 button id: {v}"),
         },
@@ -223,7 +223,7 @@ fn match_sdl_button(id: &StringOrU16) -> anyhow::Result<Button> {
 
 fn match_sdl_axis(id: &StringOrU16) -> anyhow::Result<Axis> {
     match id {
-        StringOrU16::String(v) => match match_sdl_axis_string(&v) {
+        StringOrU16::String(v) => match match_sdl_axis_string(v) {
             Some(v) => Ok(v),
             None => bail!("Unknown SDL3 axis id: {v}"),
         },

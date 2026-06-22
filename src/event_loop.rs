@@ -91,7 +91,7 @@ struct LoopState<'a> {
 impl LoopState<'_> {
     fn process_event(&mut self, event: Event) -> anyhow::Result<()> {
         match event {
-            Event::ControllerDeviceAdded { timestamp, which } => {
+            Event::ControllerDeviceAdded { which, .. } => {
                 let id = SDL_JoystickID(which);
 
                 let name = self.gamepad_subsystem.name_for_id(id);
@@ -173,8 +173,8 @@ impl LoopState<'_> {
                 }
 
             }
-            Event::ControllerDeviceRemoved { timestamp, which } => {
-                if let Some((id, gp)) = &mut self.input && *id == which {
+            Event::ControllerDeviceRemoved { which, .. } => {
+                if let Some((id, _)) = &mut self.input && *id == which {
                     eprintln!("Gamepad disconnected");
                     SimulatedGamepad::close(&mut self.output)?;
                     self.input = None;
@@ -184,7 +184,7 @@ impl LoopState<'_> {
                 eprintln!("Quitting");
                 self.exit = true;
             }
-            Event::ControllerButtonDown { timestamp, which, button } | Event::ControllerButtonUp { timestamp, which, button } => {
+            Event::ControllerButtonDown { which, button, .. } | Event::ControllerButtonUp { which, button, .. } => {
                 if
                     self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
                     && let Some(out) = &mut self.output
@@ -207,7 +207,7 @@ impl LoopState<'_> {
                     }
                 }
             }
-            Event::ControllerAxisMotion { timestamp, which, axis, value } => {
+            Event::ControllerAxisMotion { which, axis, value, .. } => {
                 if
                     self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
                     && let Some(out) = &mut self.output
@@ -240,7 +240,7 @@ impl LoopState<'_> {
         if let Some((_,gp)) = &self.input {
             let PowerInfo { state, percentage } = gp.power_info();
             if self.last_power_info != Some((state,percentage)) {
-                eprintln!("Battery: {}% ({:?})", percentage, state);
+                eprintln!("Battery: {percentage}% ({state:?})");
             }
             self.last_power_info = Some((state,percentage));
         }
