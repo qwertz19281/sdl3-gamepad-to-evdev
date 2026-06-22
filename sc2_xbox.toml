@@ -43,8 +43,8 @@ SDL_JOYSTICK_LINUX_DEADZONES = "1"
 "right_paddle2" = "trigger_happy4"
 
 [axis_map]
-"left_trigger" = "z"
-"right_trigger" = "rz"
+"left_trigger" = { key = "z", out_range = [0,255] }
+"right_trigger" = { key = "rz", out_range = [0,255] }
 "leftx" = "x"
 "rightx" = "rx"
 "lefty" = "y"

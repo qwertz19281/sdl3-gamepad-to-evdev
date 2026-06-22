@@ -35,11 +35,11 @@ impl ParsedConfig {
 
             add(UinputAbsSetup::new(
                 AbsoluteAxisCode::ABS_HAT0X,
-                AbsInfo::new(0, -1, 1, 0, 0, 0), // min -1, max 1
+                AbsInfo::new(0, -1, 1, 0, 0, 0),
             ));
             add(UinputAbsSetup::new(
                 AbsoluteAxisCode::ABS_HAT0Y,
-                AbsInfo::new(0, -1, 1, 0, 0, 0), // min -1, max 1
+                AbsInfo::new(0, -1, 1, 0, 0, 0),
             ));
         }
 
@@ -151,18 +151,20 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
 
     let code = match_axis_code(&cfg.key)?;
 
-    let min = if absolute {0} else {-32768};
+    let imin = if absolute {0} else {-32768};
 
     let fuzz = cfg.fuzz.or(i.default_axis_fuzz).unwrap_or(0);
     let flat = cfg.flat.or(i.default_axis_flat).unwrap_or(0);
     let res = cfg.res.or(i.default_axis_res).unwrap_or(0);
-    let [min,max] = cfg.out_range.unwrap_or([min,32767]);
+    let [min,max] = cfg.out_range.unwrap_or([imin,32767]);
 
     if max < min {
         bail!("axis out_range must be smaller or equal number first");
     }
 
-    let [ia,ib,ic] = cfg.from_range.unwrap_or([min,0,32767]);
+    let imin = if min >= 0 {0} else {-32768};
+
+    let [ia,ib,ic] = cfg.from_range.unwrap_or([imin,0,32767]);
     let [oa,ob,oc] = cfg.from_range.unwrap_or([min,0,max]);
 
     if !(ia <= ib && ib <= ic) {
