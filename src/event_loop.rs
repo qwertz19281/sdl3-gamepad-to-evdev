@@ -322,7 +322,9 @@ impl LoopState<'_> {
                             if duration == 0 {
                                 duration = 65535;
                             }
-                            gp.set_rumble(slot.left, slot.right, duration)?;
+                            let left = (slot.left as u64 * self.parsed_config.rumble_mul[0] * out.ff_gain as u64 / (65535*65535)).min(65535) as u16;
+                            let right = (slot.right as u64 * self.parsed_config.rumble_mul[1] * out.ff_gain as u64 / (65535*65535)).min(65535) as u16;
+                            gp.set_rumble(left, right, duration)?;
                         } else {
                             gp.set_rumble(0, 0, 0)?;
                         }

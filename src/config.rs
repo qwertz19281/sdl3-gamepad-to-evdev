@@ -58,6 +58,10 @@ pub struct Behavior {
     pub dpad_to_dpad: bool,
     #[serde(default = "default_true")]
     pub dpad_to_hat0: bool,
+    #[serde(default)]
+    pub rumble_multiplier_left: Option<f64>,
+    #[serde(default)]
+    pub rumble_multiplier_right: Option<f64>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

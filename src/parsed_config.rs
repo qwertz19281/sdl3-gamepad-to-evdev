@@ -18,6 +18,7 @@ pub struct ParsedConfig {
     pub button_lut: Vec<u16>,
     pub axis_lut: Vec<Option<Box<ParsedAxisBinding>>>,
     pub power_refresh_interval: u64,
+    pub rumble_mul: [u64;2],
 }
 
 impl ParsedConfig {
@@ -67,6 +68,11 @@ impl ParsedConfig {
 
         let power_refresh_interval= cfg.input_gamepad.power_refresh_interval.unwrap_or(5000) as u64 * 1_000_000;
 
+        let rumble_mul = [
+            cfg.behavior.rumble_multiplier_left.map_or(65535, |v| ((v.abs() * 65535.).round() as u64).min(65535*2)),
+            cfg.behavior.rumble_multiplier_right.map_or(65535, |v| ((v.abs() * 65535.).round() as u64).min(65535*2)),
+        ];
+
         Ok(ParsedConfig {
             button_bindings,
             axis_bindings,
@@ -75,6 +81,7 @@ impl ParsedConfig {
             button_lut,
             axis_lut,
             power_refresh_interval,
+            rumble_mul,
         })
     }
 }
