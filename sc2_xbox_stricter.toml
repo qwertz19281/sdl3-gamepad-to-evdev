@@ -1,0 +1,43 @@
+[input_gamepad]
+#filter_name = "Steam Controller"
+# 0x28DE (valve)
+filter_vendor_id = 0x28DE
+# 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+filter_product_id = [0x1304,0x1302,0x1303]
+
+[simulate_gamepad]
+name = "Microsoft X-Box 360 pad"
+bus_type = "BUS_USB"
+vendor_id = 0x045E
+product_id = 0x028E
+version = 0x110
+
+[behavior]
+dpad_to_dpad = false
+dpad_to_hat0 = true
+
+[sdl_hints]
+SDL_JOYSTICK_LINUX_DEADZONES = "1"
+
+[button_map]
+"south" = "south"
+"east" = "east"
+# nedd to be swapped for some reason, else it's swapped in many programs/games
+"north" = "west"
+"west" = "north"
+"start" = "start"
+"back" = "select"
+"left_shoulder" = "tl"
+"right_shoulder" = "tr"
+"left_stick" = "thumbl"
+"right_stick" = "thumbr"
+# steam button
+"guide" = "mode"
+
+[axis_map]
+"left_trigger" = { key = "z", out_range = [0,255] }
+"right_trigger" = { key = "rz", out_range = [0,255] }
+"leftx" = "x"
+"rightx" = "rx"
+"lefty" = "y"
+"righty" = "ry"
