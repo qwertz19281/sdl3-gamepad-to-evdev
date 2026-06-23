@@ -5,6 +5,7 @@ use sdl3::joystick::{PowerInfo, PowerLevel};
 use sdl3::sensor::SensorType;
 use sdl3::{EventPump, EventSubsystem, GamepadSubsystem, Sdl};
 use sdl3::event::Event;
+use sdl3_sys::events::{SDL_EVENT_FIRST, SDL_EVENT_LAST, SDL_GETEVENT, SDL_PeepEvents};
 use sdl3_sys::joystick::SDL_JoystickID;
 use sdl3_sys::timer::SDL_GetTicksNS;
 
@@ -45,23 +46,21 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
     eprintln!("SDL initialized");
 
     let wait_timeout_ms = cfg.input_gamepad.wait_timeout_ms.unwrap_or(10);
+    let max_batch_size = cfg.input_gamepad.input_event_batch_size.unwrap_or(22);
 
-    let mut total_counter = 0u64;
-    let mut batch_counters = vec![0u64; 65];
+    // let mut total_counter = 0u64;
+    // let mut batch_counters = vec![0u64; 65];
 
     loop {
-        let event = ls.event_pump.wait_event_timeout_ms(wait_timeout_ms);
+        let events = ls.pull_event_batch(max_batch_size, wait_timeout_ms); // 14 or 22
 
-        if let Some(event) = event {
-            total_counter += 1;
-            let batch_size = 1 + ls.event_subsystem.peek_events::<Vec<_>>(63).len(); // 14 or 22
-            batch_counters[batch_size] += 1;
+        // total_counter += events.len() as u64;
+        // batch_counters[events.len()] += 1;
 
-            ls.tick = event.get_timestamp();
-            ls.process_event(event)?;
-        } else {
-            batch_counters[0] += 1;
-            ls.tick = unsafe { SDL_GetTicksNS() };
+        ls.tick = events.first().map_or(unsafe { SDL_GetTicksNS() }, |e| e.get_timestamp() );
+
+        for e in events {
+            ls.process_event(e)?;
         }
 
         if let Some(out) = &mut ls.output {
@@ -80,8 +79,8 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         }
     }
 
-    eprintln!("Total events: {total_counter}");
-    eprintln!("Batch sizes: {batch_counters:?}");
+    // eprintln!("Total events: {total_counter}");
+    // eprintln!("Batch sizes: {batch_counters:?}");
 
     Ok(())
 }
@@ -259,5 +258,42 @@ impl LoopState<'_> {
             self.last_power_info = Some((state,percentage));
         }
         Ok(())
+    }
+
+    fn pull_event_batch(&mut self, max: usize, wait_ms: u32) -> Vec<Event> {
+        let first = self.event_pump.wait_event_timeout_ms(wait_ms);
+
+        let Some(first) = first else {return vec![]};
+
+        let mut staging_vec = Vec::with_capacity(max-1);
+        let mut out_vec = Vec::with_capacity(max);
+
+        out_vec.push(first);
+
+        if max > 1 {
+            let result = unsafe {
+                SDL_PeepEvents(
+                    staging_vec.as_mut_ptr(),
+                    max as i32 - 1,
+                    SDL_GETEVENT,
+                    SDL_EVENT_FIRST.into(),
+                    SDL_EVENT_LAST.into(),
+                )
+            };
+
+            if result < 0 {
+                panic!("SDL_PeepEvents error {result}");
+            }
+
+            unsafe {
+                staging_vec.set_len(result as _);
+            }
+
+            for v in staging_vec {
+                out_vec.push(Event::from_ll(v));
+            }
+        }
+
+        out_vec
     }
 }

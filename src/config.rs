@@ -28,6 +28,8 @@ pub struct InputGamepad {
     pub wait_timeout_ms: Option<u32>,
     #[serde(default)]
     pub power_refresh_interval: Option<u32>,
+    #[serde(default)]
+    pub input_event_batch_size: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
