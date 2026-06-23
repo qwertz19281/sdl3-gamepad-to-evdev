@@ -20,24 +20,24 @@ dpad_to_hat0 = true
 SDL_JOYSTICK_LINUX_DEADZONES = "1"
 
 [button_map]
-"south" = "south"
-"east" = "east"
+south = "south"
+east = "east"
 # nedd to be swapped for some reason, else it's swapped in many programs/games
-"north" = "west"
-"west" = "north"
-"start" = "start"
-"back" = "select"
-"left_shoulder" = "tl"
-"right_shoulder" = "tr"
-"left_stick" = "thumbl"
-"right_stick" = "thumbr"
+north = "west"
+west = "north"
+start = "start"
+back = "select"
+left_shoulder = "tl"
+right_shoulder = "tr"
+left_stick = "thumbl"
+right_stick = "thumbr"
 # steam button
-"guide" = "mode"
+guide = "mode"
 
 [axis_map]
-"left_trigger" = { key = "z", out_range = [0,255] }
-"right_trigger" = { key = "rz", out_range = [0,255] }
-"leftx" = "x"
-"rightx" = "rx"
-"lefty" = "y"
-"righty" = "ry"
+left_trigger = { key = "z", out_range = [0,255] }
+right_trigger = { key = "rz", out_range = [0,255] }
+leftx = "x"
+rightx = "rx"
+lefty = "y"
+righty = "ry"

@@ -3,7 +3,7 @@ use evdev::InputEvent;
 use sdl3::gamepad::Gamepad;
 use sdl3::joystick::{PowerInfo, PowerLevel};
 use sdl3::sensor::SensorType;
-use sdl3::{EventPump, GamepadSubsystem, Sdl};
+use sdl3::{EventPump, EventSubsystem, GamepadSubsystem, Sdl};
 use sdl3::event::Event;
 use sdl3_sys::joystick::SDL_JoystickID;
 use sdl3_sys::timer::SDL_GetTicksNS;
@@ -24,11 +24,13 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
     let sdl_context = sdl3::init()?;
     let gamepad_subsystem = sdl_context.gamepad()?;
     let event_pump = sdl_context.event_pump()?;
+    let event_subsystem = sdl_context.event()?;
 
     let mut ls = LoopState {
         sdl_context,
         gamepad_subsystem,
         event_pump,
+        event_subsystem,
         cfg,
         parsed_config,
         exit: false,
@@ -44,13 +46,21 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
 
     let wait_timeout_ms = cfg.input_gamepad.wait_timeout_ms.unwrap_or(10);
 
+    let mut total_counter = 0u64;
+    let mut batch_counters = vec![0u64; 65];
+
     loop {
         let event = ls.event_pump.wait_event_timeout_ms(wait_timeout_ms);
 
         if let Some(event) = event {
+            total_counter += 1;
+            let batch_size = 1 + ls.event_subsystem.peek_events::<Vec<_>>(63).len(); // 14 or 22
+            batch_counters[batch_size] += 1;
+
             ls.tick = event.get_timestamp();
             ls.process_event(event)?;
         } else {
+            batch_counters[0] += 1;
             ls.tick = unsafe { SDL_GetTicksNS() };
         }
 
@@ -70,6 +80,9 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         }
     }
 
+    eprintln!("Total events: {total_counter}");
+    eprintln!("Batch sizes: {batch_counters:?}");
+
     Ok(())
 }
 
@@ -77,6 +90,7 @@ struct LoopState<'a> {
     sdl_context: Sdl,
     gamepad_subsystem: GamepadSubsystem,
     event_pump: EventPump,
+    event_subsystem: EventSubsystem,
     exit: bool,
     input: Option<(SDL_JoystickID,Gamepad)>,
     output: Option<SimulatedGamepad>,

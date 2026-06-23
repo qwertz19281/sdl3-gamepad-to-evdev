@@ -12,7 +12,9 @@ product_id = 0x028E
 version = 0x114
 
 [behavior]
+# whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
 dpad_to_dpad = false
+# whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
 dpad_to_hat0 = true
 
 [sdl_hints]
@@ -43,6 +45,7 @@ SDL_JOYSTICK_LINUX_DEADZONES = "1"
 "right_paddle2" = "trigger_happy4"
 
 [axis_map]
+# match xbox 360 evdev behavior by emitting trigger values in 0-255 range
 "left_trigger" = { key = "z", out_range = [0,255] }
 "right_trigger" = { key = "rz", out_range = [0,255] }
 "leftx" = "x"
