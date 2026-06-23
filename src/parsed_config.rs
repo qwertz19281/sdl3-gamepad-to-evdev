@@ -7,6 +7,7 @@ use sdl3::gamepad::{Axis, Button};
 use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 
 use crate::config::{AxisMappingEnum, ButtonMappingEnum, Config, SimulateGamepad, StringOrU16};
+use crate::none_vec;
 
 #[derive(Debug)]
 pub struct ParsedConfig {
@@ -56,7 +57,7 @@ impl ParsedConfig {
         }
 
         let max_axis_id = axis_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadAxis::COUNT.0);
-        let mut axis_lut = std::iter::repeat_with(|| None).take(max_axis_id as _).collect::<Vec<_>>();
+        let mut axis_lut = none_vec(max_axis_id as _);
 
         for (k,v) in &axis_bindings {
             if k.to_ll().0 >= 0 {

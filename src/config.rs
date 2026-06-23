@@ -48,6 +48,8 @@ pub struct SimulateGamepad {
     pub default_axis_res: Option<i32>,
     #[serde(default)]
     pub keep_open_out_gamepad: Option<bool>,
+    #[serde(default)]
+    pub enable_rumble: bool,
 }
 
 #[derive(Debug, Deserialize)]

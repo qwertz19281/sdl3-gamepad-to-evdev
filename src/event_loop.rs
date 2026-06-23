@@ -13,7 +13,7 @@ use crate::{FmtOpt, FmtOptHex};
 use crate::button_tracker::ButtonTracker;
 use crate::config::Config;
 use crate::parsed_config::ParsedConfig;
-use crate::simulated::SimulatedGamepad;
+use crate::simulated::{SimpleRumbleSlot, SimulatedGamepad};
 
 pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
     sdl3::hint::set("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
@@ -77,6 +77,8 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         if ls.exit {
             break;
         }
+
+        ls.process_rumble()?;
     }
 
     // eprintln!("Total events: {total_counter}");
@@ -295,5 +297,66 @@ impl LoopState<'_> {
         }
 
         out_vec
+    }
+
+    fn process_rumble(&mut self) -> anyhow::Result<()> {
+        use evdev::{FFEffectCode, FFEffectKind, UInputCode};
+
+        if !self.cfg.simulate_gamepad.enable_rumble {return Ok(());}
+
+        let Some(out) = &mut self.output else {return Ok(())};
+        let Some((_,gp)) = &mut self.input else {return Ok(())};
+
+        out.fill_in_queue()?;
+
+        for e in out.in_queue.drain(..) {
+            //eprintln!("EVENT: {e:?}");
+            match e.destructure() {
+                evdev::EventSummary::ForceFeedback(_ffevent, FFEffectCode::FF_GAIN, v) => {
+                    out.ff_gain = v;
+                },
+                evdev::EventSummary::ForceFeedback(_ffevent, slot, v) if (slot.0 as usize) < out.ff_slot.len() => {
+                    if v > 0 {
+                        if let Some(slot) = &out.ff_slot[slot.0 as usize] {
+                            let mut duration = slot.duration as u32;
+                            if duration == 0 {
+                                duration = 65535;
+                            }
+                            gp.set_rumble(slot.left, slot.right, duration)?;
+                        } else {
+                            gp.set_rumble(0, 0, 0)?;
+                        }
+                    } else {
+                        gp.set_rumble(0, 0, 0)?;
+                    }
+                },
+                evdev::EventSummary::UInput(uinput_event, UInputCode::UI_FF_UPLOAD, _) => {
+                    let uploaded = out.dev.process_ff_upload(uinput_event)?;
+                    let effect = uploaded.effect();
+                    
+                    if let Some(slot) = out.ff_slot.get_mut(uploaded.effect_id() as usize) {
+                        if let FFEffectKind::Rumble { strong_magnitude, weak_magnitude } = effect.kind {
+                            *slot = Some(SimpleRumbleSlot {
+                                left: strong_magnitude,
+                                right: weak_magnitude,
+                                duration: effect.replay.length,
+                            });
+                        } else {
+                            *slot = None;
+                        }
+                    }
+                },
+                evdev::EventSummary::UInput(uinput_event, UInputCode::UI_FF_ERASE, _) => {
+                    let uploaded = out.dev.process_ff_erase(uinput_event)?;
+
+                    if let Some(slot) = out.ff_slot.get_mut(uploaded.effect_id() as usize) {
+                        *slot = None;
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        Ok(())
     }
 }

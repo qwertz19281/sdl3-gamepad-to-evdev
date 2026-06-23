@@ -43,3 +43,7 @@ impl<T> fmt::Display for FmtOptHex<T> where T: fmt::UpperHex {
         }
     }
 }
+
+fn none_vec<T>(len: usize) -> Vec<Option<T>> {
+    std::iter::repeat_with(|| None).take(len).collect::<Vec<_>>()
+}

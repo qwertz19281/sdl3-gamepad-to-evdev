@@ -10,6 +10,7 @@ name = "Microsoft X-Box 360 pad"
 vendor_id = 0x045E
 product_id = 0x028E
 version = 0x114
+enable_rumble = true
 
 [behavior]
 # whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.

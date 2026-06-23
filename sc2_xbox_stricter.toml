@@ -11,6 +11,7 @@ bus_type = "BUS_USB"
 vendor_id = 0x045E
 product_id = 0x028E
 version = 0x110
+enable_rumble = true
 
 [behavior]
 dpad_to_dpad = false
