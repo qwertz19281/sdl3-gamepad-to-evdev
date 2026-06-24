@@ -4,6 +4,7 @@
 filter_vendor_id = 0x28DE
 # 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
 filter_product_id = [0x1304,0x1302,0x1303]
+wait_timeout_ms = 4
 
 [simulate_gamepad]
 name = "Microsoft X-Box 360 pad"
@@ -11,6 +12,7 @@ bus_type = "BUS_USB"
 vendor_id = 0x045E
 product_id = 0x028E
 version = 0x110
+# enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
 enable_rumble = true
 
 [behavior]
@@ -27,7 +29,7 @@ SDL_JOYSTICK_LINUX_DEADZONES = "1"
 [button_map]
 south = "south"
 east = "east"
-# nedd to be swapped for some reason, else it's swapped in many programs/games
+# need to be swapped for some reason, else it's swapped in many programs/games
 north = "west"
 west = "north"
 start = "start"

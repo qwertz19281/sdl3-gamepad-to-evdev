@@ -1,7 +1,10 @@
 [package]
 name = "sdl3toevdev"
+description = "Bridge a SDL3-compatible gamepad to a virtual evdev gamepad"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.88"
 
 [dependencies]
 sdl3 = { version = "0.18.4", features = ["build-from-source-static", "hidapi"] }
@@ -12,7 +15,6 @@ toml = "1.1.2"
 serde = { version = "1", features = ["derive"] }
 clap = { version = "4.5", features = ["derive"] }
 nix = { version = "0.29", features = [] }
-
 
 [profile.release]
 debug = true
