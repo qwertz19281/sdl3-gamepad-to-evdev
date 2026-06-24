@@ -173,7 +173,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
     let imin = if min >= 0 {0} else {-32768};
 
     let [ia,ib,ic] = cfg.from_range.unwrap_or([imin,0,32767]);
-    let [oa,ob,oc] = cfg.from_range.unwrap_or([min,0,max]);
+    let [oa,ob,oc] = cfg.to_range.unwrap_or([min,0,max]);
 
     if !(ia <= ib && ib <= ic) {
         bail!("axis from_range must not be decrementing order");
