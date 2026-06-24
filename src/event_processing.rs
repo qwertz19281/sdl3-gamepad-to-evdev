@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use evdev::{EventSummary, FFEffectCode, FFEffectKind, InputEvent, UInputCode};
+use evdev::{AbsoluteAxisCode, EventSummary, EventType, FFEffectCode, FFEffectKind, InputEvent, UInputCode};
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
 use sdl3::joystick::{PowerInfo, PowerLevel};
@@ -8,6 +8,7 @@ use sdl3::{EventPump, EventSubsystem, GamepadSubsystem, Sdl};
 use sdl3_sys::events::{SDL_EVENT_FIRST, SDL_EVENT_LAST, SDL_GETEVENT, SDL_PeepEvents};
 use sdl3_sys::joystick::SDL_JoystickID;
 
+use crate::simulated_gyro::SimulatedGamepadGyro;
 use crate::{FmtOpt, FmtOptHex};
 use crate::button_tracker::ButtonTracker;
 use crate::config::Config;
@@ -25,6 +26,7 @@ pub struct LoopState<'a> {
     pub exit: bool,
     pub input: Option<(SDL_JoystickID,Gamepad)>,
     pub output: Option<SimulatedGamepad>,
+    pub motion_output: Option<SimulatedGamepadGyro>,
     pub cfg: &'a Config,
     pub parsed_config: &'a ParsedConfig,
     pub tracker: ButtonTracker,
@@ -95,16 +97,26 @@ impl LoopState<'_> {
                 match try_open() {
                     Ok(Some(v)) => {
                         SimulatedGamepad::close(&mut self.output)?;
+                        SimulatedGamepadGyro::close(&mut self.motion_output)?;
 
                         let out = SimulatedGamepad::create(self.cfg, self.parsed_config)?;
 
-                        // Disable currently not supported sensors to maybe reduce gamepad battery usage
-                        let _ = v.sensor_set_enabled(SensorType::AccelerometerLeft, false);
-                        let _ = v.sensor_set_enabled(SensorType::AccelerometerRight, false);
-                        let _ = v.sensor_set_enabled(SensorType::GyroscopeLeft, false);
-                        let _ = v.sensor_set_enabled(SensorType::GyroscopeRight, false);
-                        let _ = v.sensor_set_enabled(SensorType::Accelerometer, false);
-                        let _ = v.sensor_set_enabled(SensorType::Gyroscope, false);
+                        if let Some(gicfg) = &self.cfg.simulate_gamepad_gyro && gicfg.enable {
+                            let out = SimulatedGamepadGyro::create(self.cfg, gicfg, self.parsed_config)?;
+
+                            v.sensor_set_enabled(SensorType::Accelerometer, true)?;
+                            v.sensor_set_enabled(SensorType::Gyroscope, true)?;
+
+                            self.motion_output = Some(out);
+                        } else {
+                            // Disable unusede sensors to maybe reduce gamepad battery usage
+                            let _ = v.sensor_set_enabled(SensorType::AccelerometerLeft, false);
+                            let _ = v.sensor_set_enabled(SensorType::AccelerometerRight, false);
+                            let _ = v.sensor_set_enabled(SensorType::GyroscopeLeft, false);
+                            let _ = v.sensor_set_enabled(SensorType::GyroscopeRight, false);
+                            let _ = v.sensor_set_enabled(SensorType::Accelerometer, false);
+                            let _ = v.sensor_set_enabled(SensorType::Gyroscope, false);
+                        }
 
                         self.input = Some((id, v));
                         self.output = Some(out);
@@ -122,6 +134,7 @@ impl LoopState<'_> {
                 if let Some((id, _)) = &mut self.input && *id == which {
                     eprintln!("Gamepad disconnected");
                     SimulatedGamepad::close(&mut self.output)?;
+                    SimulatedGamepadGyro::close(&mut self.motion_output)?;
                     self.input = None;
                 }
             }
@@ -142,7 +155,7 @@ impl LoopState<'_> {
                         .filter(|&c| c != u16::MAX );
 
                     if let Some(m) = mapping {
-                        let evdev_event = InputEvent::new(evdev::EventType::KEY.0, m, down as _);
+                        let evdev_event = InputEvent::new(EventType::KEY.0, m, down as _);
                         out.queue.push(evdev_event);
                     }
 
@@ -170,9 +183,40 @@ impl LoopState<'_> {
                         }
                         let scaled = (scaled + m.out_off).clamp(m.clamp_out[0] as i64, m.clamp_out[1] as i64) as i32;
 
-                        let evdev_event = InputEvent::new(evdev::EventType::ABSOLUTE.0, m.setup.code(), scaled);
+                        let evdev_event = InputEvent::new(EventType::ABSOLUTE.0, m.setup.code(), scaled);
                         out.queue.push(evdev_event);
                     }
+                }
+            }
+            Event::ControllerSensorUpdated { timestamp, which, sensor, data: [ix,iy,iz] } => {
+                if
+                    self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
+                    && let Some(out) = &mut self.output
+                    && let Some(mout) = &mut self.motion_output
+                    && let Some(gicfg) = &self.cfg.simulate_gamepad_gyro
+                    && let Some(([mx,my,mz], cx,cy,cz, out_info)) = match sensor {
+                        SensorType::Accelerometer => Some((
+                            gicfg.accel_mul,
+                            AbsoluteAxisCode::ABS_X, AbsoluteAxisCode::ABS_Y, AbsoluteAxisCode::ABS_Z,
+                            mout.accel_info
+                        )),
+                        SensorType::Gyroscope => Some((
+                            gicfg.gyro_mul,
+                            AbsoluteAxisCode::ABS_RX, AbsoluteAxisCode::ABS_RY, AbsoluteAxisCode::ABS_RZ,
+                            mout.gyro_info
+                        )),
+                        _ => None,
+                    }
+                {
+                    let [ox,oy,oz] = [
+                        ((ix * mx) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) as i32,
+                        ((iy * my) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) as i32,
+                        ((iz * mz) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) as i32,
+                    ];
+
+                    mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cx.0, ox));
+                    mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cy.0, oy));
+                    mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cz.0, oz));
                 }
             }
             _ => {}

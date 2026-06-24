@@ -18,6 +18,7 @@ pub struct SimulatedGamepad {
 
 impl SimulatedGamepad {
     pub fn submit(&mut self) -> io::Result<()> {
+        if self.queue.is_empty() {return Ok(());}
         let result = self.dev.emit(&self.queue);
         self.queue.clear();
         result

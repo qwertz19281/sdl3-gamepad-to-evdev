@@ -1,0 +1,68 @@
+[input_gamepad]
+#filter_name = "Steam Controller"
+# 0x28DE (valve)
+filter_vendor_id = 0x28DE
+# 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+filter_product_id = [0x1304,0x1302,0x1303]
+wait_timeout_ms = 4
+
+[simulate_gamepad]
+name = "Sony Computer Entertainment Wireless Controller"
+bus_type = "BUS_USB"
+vendor_id = 0x54c
+product_id = 0x5c4
+version = 0x8111
+# enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
+enable_rumble = true
+
+# SUBSYSTEM=="input", ATTRS{name}=="Sony Computer Entertainment Wireless Controller Motion Sensors", MODE="0660", TAG+="uaccess"
+[simulate_gamepad_gyro]
+enable = true
+name = "Sony Computer Entertainment Wireless Controller Motion Sensors"
+vendor_id = 0x54c
+product_id = 0x5c4
+version = 0x8111
+# in / 9.80665 * 8192
+#accel_mul = [835.3515,-835.3515,-835.3515]
+# in * (180 / PI) * 1024
+#gyro_mul = [58670.88,-58670.88,-58670.88]
+# in / 9.80665 * 1024
+accel_mul = [104.41894,104.41894,104.41894]
+# in * (180 / PI) * 8192
+gyro_mul = [469367.03,469367.03,469367.03]
+
+[behavior]
+# whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
+dpad_to_dpad = false
+# whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
+dpad_to_hat0 = true
+rumble_multiplier_left = 1.0
+rumble_multiplier_right = 1.0
+
+[sdl_hints]
+SDL_JOYSTICK_LINUX_DEADZONES = "1"
+
+[button_map]
+south = "south"
+east = "east"
+north = "north"
+west = "west"
+start = "start"
+back = "select"
+left_shoulder = "tl"
+right_shoulder = "tr"
+left_stick = "thumbl"
+right_stick = "thumbr"
+# steam button
+guide = "mode"
+# TODO add digital trigger simulation
+left_paddle1 = "tl2"
+right_paddle1 = "tr2"
+
+[axis_map]
+left_trigger = { key = "z", out_range = [0,255] }
+right_trigger = { key = "rz", out_range = [0,255] }
+leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
+rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
+lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
+righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }

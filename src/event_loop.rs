@@ -1,3 +1,4 @@
+use evdev::{EventType, InputEvent, MiscCode};
 use sdl3_sys::timer::SDL_GetTicksNS;
 
 use crate::event_processing::LoopState;
@@ -26,6 +27,7 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         parsed_config,
         exit: false,
         output: None,
+        motion_output: None,
         input: None,
         tracker: ButtonTracker::default(),
         tick: 0,
@@ -54,6 +56,12 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig) -> anyhow::Result<()> {
         }
 
         if let Some(out) = &mut ls.output {
+            out.submit()?;
+        }
+        if let Some(out) = &mut ls.motion_output {
+            if !out.queue.is_empty() {
+                out.queue.push(InputEvent::new(EventType::MISC.0, MiscCode::MSC_TIMESTAMP.0, (ls.tick / 1000) as i32));
+            }
             out.submit()?;
         }
 

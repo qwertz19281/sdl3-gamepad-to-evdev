@@ -7,6 +7,8 @@ use serde::Deserialize;
 pub struct Config {
     pub input_gamepad: InputGamepad,
     pub simulate_gamepad: SimulateGamepad,
+    #[serde(default)]
+    pub simulate_gamepad_gyro: Option<SimulateGamepadGyro>,
     pub behavior: Behavior,
     pub button_map: HashMap<String,ButtonMappingEnum>,
     pub axis_map: HashMap<String,AxisMappingEnum>,
@@ -51,6 +53,33 @@ pub struct SimulateGamepad {
     #[serde(default)]
     pub enable_rumble: bool,
 }
+#[derive(Debug, Deserialize)]
+pub struct SimulateGamepadGyro {
+    pub enable: bool,
+    pub name: String,
+    pub vendor_id: u16,
+    pub product_id: u16,
+    pub version: u16,
+    pub accel_mul: [f32;3],
+    pub gyro_mul: [f32;3],
+    #[serde(default)]
+    pub accel_out_range: Option<[i32;2]>,
+    #[serde(default)]
+    pub gyro_out_range: Option<[i32;2]>,
+    #[serde(default)]
+    pub accel_fuzz: Option<i32>,
+    #[serde(default)]
+    pub accel_flat: Option<i32>,
+    #[serde(default)]
+    pub accel_res: Option<i32>,
+    #[serde(default)]
+    pub gyro_fuzz: Option<i32>,
+    #[serde(default)]
+    pub gyro_flat: Option<i32>,
+    #[serde(default)]
+    pub gyro_res: Option<i32>,
+}
+
 
 #[derive(Debug, Deserialize)]
 pub struct Behavior {

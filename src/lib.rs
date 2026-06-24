@@ -12,6 +12,7 @@ pub mod parsed_config;
 pub mod button_tracker;
 pub mod event_loop;
 pub mod event_processing;
+pub mod simulated_gyro;
 
 pub fn init(cfg: &Config) -> anyhow::Result<()> {
     eprintln!("\nConfig: {cfg:#?}");
