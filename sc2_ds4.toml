@@ -22,10 +22,6 @@ name = "Sony Computer Entertainment Wireless Controller Motion Sensors"
 vendor_id = 0x54c
 product_id = 0x5c4
 version = 0x8111
-# in / 9.80665 * 8192
-accel_mul = [835.35150146484375,835.35150146484375,835.35150146484375]
-# in * (180 / PI) * 1024
-gyro_mul = [58670.87890625,58670.87890625,58670.87890625]
 
 [behavior]
 # whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.

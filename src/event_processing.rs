@@ -101,8 +101,12 @@ impl LoopState<'_> {
 
                         let out = SimulatedGamepad::create(self.cfg, self.parsed_config)?;
 
-                        if let Some(gicfg) = &self.cfg.simulate_gamepad_gyro && gicfg.enable {
-                            let out = SimulatedGamepadGyro::create(self.cfg, gicfg, self.parsed_config)?;
+                        if
+                            let Some(gicfg) = &self.cfg.simulate_gamepad_gyro
+                            && let Some(pgicfg) = &self.parsed_config.parsed_gyro
+                            && gicfg.enable
+                        {
+                            let out = SimulatedGamepadGyro::create(self.cfg, gicfg, self.parsed_config, pgicfg)?;
 
                             v.sensor_set_enabled(SensorType::Accelerometer, true)?;
                             v.sensor_set_enabled(SensorType::Gyroscope, true)?;
@@ -188,22 +192,22 @@ impl LoopState<'_> {
                     }
                 }
             }
-            Event::ControllerSensorUpdated { timestamp, which, sensor, data: [ix,iy,iz] } => {
+            Event::ControllerSensorUpdated { which, sensor, data: [ix,iy,iz], .. } => {
                 if
                     self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
-                    && let Some(out) = &mut self.output
+                    //&& let Some(out) = &mut self.output
                     && let Some(mout) = &mut self.motion_output
-                    && let Some(gicfg) = &self.cfg.simulate_gamepad_gyro
+                    && let Some(gicfg) = &self.parsed_config.parsed_gyro
                     && let Some(([mx,my,mz], cx,cy,cz, out_info)) = match sensor {
                         SensorType::Accelerometer => Some((
                             gicfg.accel_mul,
                             AbsoluteAxisCode::ABS_X, AbsoluteAxisCode::ABS_Y, AbsoluteAxisCode::ABS_Z,
-                            mout.accel_info
+                            gicfg.accel_info
                         )),
                         SensorType::Gyroscope => Some((
                             gicfg.gyro_mul,
                             AbsoluteAxisCode::ABS_RX, AbsoluteAxisCode::ABS_RY, AbsoluteAxisCode::ABS_RZ,
-                            mout.gyro_info
+                            gicfg.gyro_info
                         )),
                         _ => None,
                     }

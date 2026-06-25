@@ -60,8 +60,14 @@ pub struct SimulateGamepadGyro {
     pub vendor_id: u16,
     pub product_id: u16,
     pub version: u16,
-    pub accel_mul: [f32;3],
-    pub gyro_mul: [f32;3],
+    #[serde(default)]
+    pub accel_mul: Option<[f64;3]>,
+    #[serde(default)]
+    pub gyro_mul: Option<[f64;3]>,
+    #[serde(default)]
+    pub accel_mul_raw: Option<[f32;3]>,
+    #[serde(default)]
+    pub gyro_mul_raw: Option<[f32;3]>,
     #[serde(default)]
     pub accel_out_range: Option<[i32;2]>,
     #[serde(default)]

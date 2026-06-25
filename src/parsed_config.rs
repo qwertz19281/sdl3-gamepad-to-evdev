@@ -8,6 +8,7 @@ use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 
 use crate::config::{AxisMappingEnum, ButtonMappingEnum, Config, SimulateGamepad, StringOrU16};
 use crate::none_vec;
+use crate::simulated_gyro::ParsedGyroConfig;
 
 #[derive(Debug)]
 pub struct ParsedConfig {
@@ -19,6 +20,7 @@ pub struct ParsedConfig {
     pub axis_lut: Vec<Option<Box<ParsedAxisBinding>>>,
     pub power_refresh_interval: u64,
     pub rumble_mul: [u64;2],
+    pub parsed_gyro: Option<ParsedGyroConfig>,
 }
 
 impl ParsedConfig {
@@ -73,6 +75,8 @@ impl ParsedConfig {
             cfg.behavior.rumble_multiplier_right.map_or(65535, |v| ((v.abs() * 65535.).round() as u64).min(65535*2)),
         ];
 
+        let parsed_gyro = cfg.simulate_gamepad_gyro.as_ref().map(|gicfg| ParsedGyroConfig::parse(gicfg) ).transpose()?;
+
         Ok(ParsedConfig {
             button_bindings,
             axis_bindings,
@@ -82,6 +86,7 @@ impl ParsedConfig {
             axis_lut,
             power_refresh_interval,
             rumble_mul,
+            parsed_gyro,
         })
     }
 }
