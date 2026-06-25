@@ -2,8 +2,9 @@
 #filter_name = "Steam Controller"
 # 0x28DE (valve)
 filter_vendor_id = 0x28DE
-# 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+# steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
 filter_product_id = [0x1304,0x1302,0x1303]
+wait_timeout_ms = 4
 
 [simulate_gamepad]
 name = "Microsoft X-Box 360 pad"

@@ -105,7 +105,7 @@ impl ParsedConfig {
             cfg.behavior.rumble_multiplier_right.map_or(65535, |v| ((v.abs() * 65535.).round() as u64).min(65535*2)),
         ];
 
-        let parsed_gyro = cfg.simulate_gamepad_gyro.as_ref().map(|gicfg| ParsedGyroConfig::parse(gicfg) ).transpose()?;
+        let parsed_gyro = cfg.simulate_gamepad_gyro.as_ref().map(ParsedGyroConfig::parse).transpose()?;
 
         Ok(ParsedConfig {
             button_bindings,

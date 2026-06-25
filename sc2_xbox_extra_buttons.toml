@@ -40,6 +40,12 @@ left_stick = "thumbl"
 right_stick = "thumbr"
 # steam button
 guide = "mode"
+# quick access button
+"misc1" = "base"
+"left_paddle1" = "trigger_happy1"
+"right_paddle1" = "trigger_happy2"
+"left_paddle2" = "trigger_happy3"
+"right_paddle2" = "trigger_happy4"
 
 [axis_map]
 left_trigger = { key = "z", out_range = [0,255] }

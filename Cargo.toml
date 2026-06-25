@@ -8,7 +8,7 @@ rust-version = "1.88"
 
 [dependencies]
 sdl3 = { version = "0.18.4", features = ["build-from-source-static", "hidapi"] }
-sdl3-sys = { version = "0.6.6", features = ["build-from-source-static"] }
+sdl3-sys = { version = "0.6.6", features = ["build-from-source-static", "no-sdl-audio", "no-sdl-gpu", "no-sdl-render", "no-sdl-camera", "no-sdl-dialog", "no-sdl-tray"] }
 evdev = { version = "0.13.2", features = [] }
 anyhow = "1"
 toml = "1.1.2"
@@ -17,5 +17,4 @@ clap = { version = "4.5", features = ["derive"] }
 nix = { version = "0.29", features = [] }
 
 [profile.release]
-debug = true
 codegen-units = 1

@@ -28,9 +28,9 @@ pub fn init(cfg: &Config, verbose: bool) -> anyhow::Result<()> {
     entry(cfg, &parsed_config)
 }
 
-struct FmtOpt<T>(Option<T>);
+struct FmtOpt<T>(T);
 
-impl<T> fmt::Display for FmtOpt<T> where T: fmt::Display {
+impl<T> fmt::Display for FmtOpt<&Option<T>> where T: fmt::Display {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
             Some(v) => write!(f, "{v}"),
@@ -39,9 +39,18 @@ impl<T> fmt::Display for FmtOpt<T> where T: fmt::Display {
     }
 }
 
-struct FmtOptHex<T>(Option<T>);
+impl<T,E> fmt::Display for FmtOpt<&Result<T,E>> where T: fmt::Display {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Ok(v) => write!(f, "{v}"),
+            Err(_) => write!(f, "??"),
+        }
+    }
+}
 
-impl<T> fmt::Display for FmtOptHex<T> where T: fmt::UpperHex {
+struct FmtOptHex<T>(T);
+
+impl<T> fmt::Display for FmtOptHex<&Option<T>> where T: fmt::UpperHex {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
             Some(v) => write!(f, "{v:#06X}"),

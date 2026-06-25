@@ -45,13 +45,16 @@ impl LoopState<'_> {
                 let vendor = self.gamepad_subsystem.vendor_for_id(id);
                 let product = self.gamepad_subsystem.product_for_id(id);
                 let version = self.gamepad_subsystem.product_version_for_id(id);
+                let path = self.gamepad_subsystem.path_for_id(id);
+                let guid = self.gamepad_subsystem.guid_for_id(id);
 
                 let in_cfg = &self.cfg.input_gamepad;
 
                 let formatted_name = format!(
-                    "{} ({}:{} ver. {})",
-                    FmtOpt(name.as_deref().ok()),
-                    FmtOptHex(vendor), FmtOptHex(product), FmtOptHex(version)
+                    "{} ({}:{} ver. {}) ({} @ {})",
+                    FmtOpt(&name.as_deref().ok()),
+                    FmtOptHex(&vendor), FmtOptHex(&product), FmtOptHex(&version),
+                    guid, FmtOpt(&path)
                 );
 
                 let try_open = || -> anyhow::Result<Option<Gamepad>> {
@@ -59,6 +62,20 @@ impl LoopState<'_> {
                         let name = name?;
 
                         if !name.contains(v) {
+                            return Ok(None);
+                        }
+                    }
+
+                    if let Some(v) = &in_cfg.filter_guid {
+                        if !format!("{guid}").contains(v) {
+                            return Ok(None);
+                        }
+                    }
+
+                    if let Some(v) = &in_cfg.filter_path {
+                        let path = path.context("Failed to query path")?;
+
+                        if !path.contains(v) {
                             return Ok(None);
                         }
                     }
@@ -91,7 +108,7 @@ impl LoopState<'_> {
                         return Ok(None);
                     }
 
-                    Ok(Some(self.gamepad_subsystem.open(id)?))
+                    Ok(Some(self.gamepad_subsystem.open(id).context("querying gamepad metadata")?))
                 };
 
                 match try_open() {

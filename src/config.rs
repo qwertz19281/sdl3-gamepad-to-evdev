@@ -27,6 +27,10 @@ pub struct InputGamepad {
     #[serde(default)]
     pub filter_product_version: VendorProductIds,
     #[serde(default)]
+    pub filter_guid: Option<String>,
+    #[serde(default)]
+    pub filter_path: Option<String>,
+    #[serde(default)]
     pub wait_timeout_ms: Option<u32>,
     #[serde(default)]
     pub power_refresh_interval: Option<u32>,

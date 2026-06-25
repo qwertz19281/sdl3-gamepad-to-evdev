@@ -1,0 +1,56 @@
+name: Manual Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'existing release tag'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install SDL3 Ubuntu dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+          build-essential git make \
+          pkg-config cmake ninja-build \
+          libx11-dev libxext-dev libdbus-1-dev libibus-1.0-dev libudev-dev libusb-1.0-0-dev \
+          libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxkbcommon-dev libxtst-dev
+
+      - name: Build release binary
+        run: |
+          cargo clean
+          cargo build --release
+
+      - name: Prepare release asset
+        run: |
+          BINARY_NAME="sdl3toevdev"
+          VERSION="${{ inputs.release_tag }}"
+          ARCHIVE_NAME="${BINARY_NAME}-${VERSION}-linux-static-sdl3-amd64.zip"
+          
+          mv target/release/$BINARY_NAME $BINARY_NAME
+          rm -f $ARCHIVE_NAME
+          zip -9 $ARCHIVE_NAME $BINARY_NAME
+
+      - name: Upload to GitHub Release via GH CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ inputs.release_tag }}"
+          
+          gh release upload $VERSION *-linux-amd64.zip --clobber
