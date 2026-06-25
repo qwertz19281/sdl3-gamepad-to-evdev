@@ -34,12 +34,12 @@ impl SimulatedGamepadGyro {
         let [amin,amax] = gicfg.accel_out_range.unwrap_or([-32768,32768]);
         let afuzz = gicfg.accel_fuzz.unwrap_or(16);
         let aflat = gicfg.accel_flat.unwrap_or(0);
-        let ares = gicfg.accel_res.unwrap_or(1024);
+        let ares = gicfg.accel_res.unwrap_or(8092);
 
         let [gmin,gmax] = gicfg.gyro_out_range.unwrap_or([-2097152,2097152]);
         let gfuzz = gicfg.gyro_fuzz.unwrap_or(16);
         let gflat = gicfg.gyro_flat.unwrap_or(0);
-        let gres = gicfg.gyro_flat.unwrap_or(8192);
+        let gres = gicfg.gyro_flat.unwrap_or(1024);
         
         let accel_info = AbsInfo::new(0, amin, amax, afuzz, aflat, ares);
         let gyro_info = AbsInfo::new(0, gmin, gmax, gfuzz, gflat, gres);
