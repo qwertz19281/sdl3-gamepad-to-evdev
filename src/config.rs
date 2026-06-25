@@ -97,6 +97,8 @@ pub struct Behavior {
     pub rumble_multiplier_left: Option<f64>,
     #[serde(default)]
     pub rumble_multiplier_right: Option<f64>,
+    #[serde(default)]
+    pub simulate_digital_trigger: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -135,17 +137,10 @@ pub struct AxisMapping {
     pub flat: Option<i32>,
     #[serde(default)]
     pub res: Option<i32>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-pub enum StringOrU16 {
-    String(String),
-    U16(u16),
-}
-
-fn default_true() -> bool {
-    true
+    #[serde(default)]
+    pub digitrigger_button: Option<StringOrU16>,
+    #[serde(default)]
+    pub digitrigger_thresh: Option<[TrThreshold;2]>,
 }
 
 impl ButtonMappingEnum {
@@ -171,10 +166,19 @@ impl AxisMappingEnum {
                 fuzz: None,
                 flat: None,
                 res: None,
+                digitrigger_button: None,
+                digitrigger_thresh: None,
             },
             Self::Advanced(axis_mapping) => axis_mapping.clone(),
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum StringOrU16 {
+    String(String),
+    U16(u16),
 }
 
 impl From<u16> for StringOrU16 {
@@ -195,6 +199,13 @@ impl From<&str> for StringOrU16 {
     }
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum TrThreshold {
+    F64(f64),
+    Abs { abs: i32 },
+}
+
 #[derive(Clone, Debug, Deserialize, Default)]
 #[serde(untagged)]
 pub enum VendorProductIds {
@@ -212,4 +223,8 @@ impl VendorProductIds {
             Self::Empty => &[],
         }
     }
+}
+
+fn default_true() -> bool {
+    true
 }

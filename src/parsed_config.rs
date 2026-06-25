@@ -6,7 +6,7 @@ use evdev::{AbsInfo, AbsoluteAxisCode, BusType, EvdevEnum, KeyCode, UinputAbsSet
 use sdl3::gamepad::{Axis, Button};
 use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 
-use crate::config::{AxisMappingEnum, ButtonMappingEnum, Config, SimulateGamepad, StringOrU16};
+use crate::config::{AxisMappingEnum, ButtonMappingEnum, Config, SimulateGamepad, StringOrU16, TrThreshold};
 use crate::none_vec;
 use crate::simulated_gyro::ParsedGyroConfig;
 
@@ -15,6 +15,7 @@ pub struct ParsedConfig {
     pub button_bindings: ParsedButtonBindings,
     pub axis_bindings: ParsedAxisBindings,
     pub evdev_bus_type: BusType,
+    pub additional_buttons: Vec<KeyCode>,
     pub additional_axes: Vec<UinputAbsSetup>,
     pub button_lut: Vec<u16>,
     pub axis_lut: Vec<Option<Box<ParsedAxisBinding>>>,
@@ -30,6 +31,10 @@ impl ParsedConfig {
 
         let mut axis_exclusions = HashSet::new();
         let mut additional_axes = Vec::new();
+
+
+        let mut button_exclusions = HashSet::new();
+        let mut additional_buttons = Vec::new();
 
         if cfg.behavior.dpad_to_hat0 {
             let mut add = |setup: UinputAbsSetup| {
@@ -47,8 +52,22 @@ impl ParsedConfig {
             ));
         }
 
-        let button_bindings = parse_button_bindings(&cfg.button_map, !cfg.behavior.dpad_to_dpad)?;
         let axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, axis_exclusions)?;
+
+        if cfg.behavior.simulate_digital_trigger {
+            let mut add = |code: KeyCode| {
+                button_exclusions.insert(code);
+                additional_buttons.push(code);
+            };
+
+            for m in axis_bindings.values() {
+                if let Some(v) = m.digitrigger_button {
+                    add(v);
+                }
+            }
+        }
+
+        let button_bindings = parse_button_bindings(&cfg.button_map, !cfg.behavior.dpad_to_dpad, button_exclusions)?;
 
         let max_button_id = button_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadButton::COUNT.0);
         let mut button_lut = vec![u16::MAX; max_button_id as _];
@@ -81,6 +100,7 @@ impl ParsedConfig {
             button_bindings,
             axis_bindings,
             evdev_bus_type,
+            additional_buttons,
             additional_axes,
             button_lut,
             axis_lut,
@@ -97,6 +117,7 @@ pub type ParsedAxisBindings = HashMap<Axis,ParsedAxisBinding>;
 #[derive(Debug)]
 pub struct ParsedButtonBinding {
     pub code: KeyCode,
+    pub state: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -108,18 +129,19 @@ pub struct ParsedAxisBinding {
     pub pos_fraction: [i64;2],
     pub clamp_out: [i32;2],
     pub out_range: [i32;2],
+    pub digitrigger_button: Option<KeyCode>,
+    pub digitrigger_thresh: [i32;2],
 }
 
-fn parse_button_bindings(cfg: &HashMap<String,ButtonMappingEnum>, exclude_dpad: bool) -> anyhow::Result<ParsedButtonBindings> {
+fn parse_button_bindings(cfg: &HashMap<String,ButtonMappingEnum>, exclude_dpad: bool, mut exclusions: HashSet<KeyCode>) -> anyhow::Result<ParsedButtonBindings> {
     let mut out = HashMap::new();
-    let mut out_keys = HashSet::new();
 
     for (k,v) in cfg {
         let key = match_sdl_button(&StringOrU16::String(k.clone()))?;
         let binding = parse_button_binding(v, exclude_dpad).with_context(|| format!("parsing button binding for {k}"))?;
         let Some(binding) = binding else {continue};
 
-        if !out_keys.insert(binding.code) {
+        if !exclusions.insert(binding.code) {
             bail!("{k} adds duplicate output key {}, which is (currently) not supported", binding.code.code());
         }
 
@@ -156,6 +178,7 @@ pub fn parse_button_binding(cfg: &ButtonMappingEnum, exclude_dpad: bool) -> anyh
 
     Ok(Some(ParsedButtonBinding {
         code: match_key_code(&cfg.key)?,
+        state: false,
     }))
 }
 
@@ -201,11 +224,32 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
     let in_off = ib as i64;
     let out_off = ob as i64;
 
-    
     let clamp_out = [
         min.max(oa.min(oc)),
         max.min(oa.max(oc)),
     ];
+
+    let digitrigger_button = cfg.digitrigger_button.map(|v| match_key_code(&v) ).transpose()?;
+
+    let digitrigger_thresh = cfg.digitrigger_thresh.unwrap_or([TrThreshold::F64(0.8),TrThreshold::F64(0.75)]);
+    let digitrigger_thresh = digitrigger_thresh.map(|v| match v {
+        _ if ic <= ib + 2 => 0,
+        TrThreshold::F64(v) if v.is_finite() && v.is_sign_negative() => {
+            (v * (ib-ia) as f64) as i32
+        },
+        TrThreshold::F64(v) if v.is_finite() && v.is_sign_positive() => {
+            (v * (ic-ib) as f64) as i32
+        },
+        TrThreshold::Abs { abs } => abs,
+        _ => 0,
+    });
+
+    if digitrigger_thresh[0] == digitrigger_thresh[1]
+        || digitrigger_thresh[0].signum() != digitrigger_thresh[1].signum()
+        || digitrigger_thresh[1].abs() > digitrigger_thresh[0].abs()
+    {
+        bail!("Invalid digitrigger press and release thresholds defined. both or none must; be zero or non-zero, have same sign, and release must be < press");
+    }
 
     Ok(ParsedAxisBinding {
         setup: UinputAbsSetup::new(
@@ -218,6 +262,8 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
         pos_fraction,
         clamp_out,
         out_range: [min,max],
+        digitrigger_button,
+        digitrigger_thresh,
     })
 }
 

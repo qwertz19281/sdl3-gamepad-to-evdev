@@ -14,6 +14,7 @@ pub struct SimulatedGamepad {
     pub in_queue: Vec<InputEvent>,
     pub ff_gain: i32,
     pub ff_slot: Vec<Option<SimpleRumbleSlot>>,
+    pub digitrigger_state: Vec<bool>,
 }
 
 impl SimulatedGamepad {
@@ -38,6 +39,10 @@ impl SimulatedGamepad {
 
         for v in parsed.button_bindings.values() {
             keys.insert(v.code);
+        }
+
+        for &k in &parsed.additional_buttons {
+            keys.insert(k);
         }
 
         let mut builder = VirtualDevice::builder()?
@@ -79,6 +84,7 @@ impl SimulatedGamepad {
             in_queue: Vec::with_capacity(32),
             ff_slot: none_vec(16),
             ff_gain: 65536,
+            digitrigger_state: vec![false; parsed.axis_lut.len()],
         })
     }
 

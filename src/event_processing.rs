@@ -178,8 +178,12 @@ impl LoopState<'_> {
                         .get(axis.to_ll().0 as usize)
                         .and_then(|v| v.as_deref() );
 
-                    if let Some(m) = mapping {
-                        let mut scaled = value as i64 - m.in_off;
+                    let mstate = out.digitrigger_state
+                        .get_mut(axis.to_ll().0 as usize);
+
+                    if let Some(m) = mapping && let Some(mstate) = mstate {
+                        let in_offsetted = value as i64 - m.in_off;
+                        let mut scaled = in_offsetted;
                         if scaled > 0 {
                             scaled = scaled * m.pos_fraction[0] / m.pos_fraction[1];
                         } else if scaled < 0 {
@@ -189,6 +193,25 @@ impl LoopState<'_> {
 
                         let evdev_event = InputEvent::new(EventType::ABSOLUTE.0, m.setup.code(), scaled);
                         out.queue.push(evdev_event);
+
+                        if self.cfg.behavior.simulate_digital_trigger
+                            && let Some(code) = m.digitrigger_button
+                            && m.digitrigger_thresh[0] != 0
+                        {
+                            let [press, release] = [m.digitrigger_thresh[0] as i64, m.digitrigger_thresh[1] as i64];
+                            // parse_config checked that press and release have same signum and sensible values
+                            let down = if *mstate {
+                                in_offsetted.signum() == press.signum() && in_offsetted.abs() >= release.abs()
+                            } else {
+                                in_offsetted.signum() == press.signum() && in_offsetted.abs() >= press.abs()
+                            };
+
+                            if *mstate != down {
+                                let evdev_event = InputEvent::new(EventType::KEY.0, code.0, down as _);
+                                out.queue.push(evdev_event);
+                                *mstate = down;
+                            }
+                        }
                     }
                 }
             }

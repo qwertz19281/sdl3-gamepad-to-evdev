@@ -30,6 +30,7 @@ dpad_to_dpad = false
 dpad_to_hat0 = true
 rumble_multiplier_left = 1.0
 rumble_multiplier_right = 1.0
+simulate_digital_trigger = true
 
 [sdl_hints]
 SDL_JOYSTICK_LINUX_DEADZONES = "1"
@@ -47,13 +48,10 @@ left_stick = "thumbl"
 right_stick = "thumbr"
 # steam button
 guide = "mode"
-# TODO add digital trigger simulation
-left_paddle1 = "tl2"
-right_paddle1 = "tr2"
 
 [axis_map]
-left_trigger = { key = "z", out_range = [0,255] }
-right_trigger = { key = "rz", out_range = [0,255] }
+left_trigger = { key = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
+right_trigger = { key = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
 leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
