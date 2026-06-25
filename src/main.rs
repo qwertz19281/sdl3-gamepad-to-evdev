@@ -13,7 +13,7 @@ fn main() -> anyhow::Result<()> {
 
     let config = toml::from_slice::<Config>(&data).context("Failed to decode config file")?;
 
-    init(&config)?;
+    init(&config, args.verbose)?;
 
     Ok(())
 }
@@ -22,6 +22,9 @@ fn main() -> anyhow::Result<()> {
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct Args {
+    /// verbose
+    #[arg(short='v')]
+    pub verbose: bool,
     /// Path to config toml file
     #[arg()]
     pub config: PathBuf,

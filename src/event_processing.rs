@@ -163,9 +163,9 @@ impl LoopState<'_> {
                         out.queue.push(evdev_event);
                     }
 
-                    if self.cfg.behavior.dpad_to_hat0 {
+                    if let Some(axes) = self.parsed_config.dpad_to_hat_axis {
                         self.tracker.track(button, down);
-                        self.tracker.submit_to_evdev(&mut out.queue);
+                        self.tracker.submit_to_evdev(&mut out.queue, axes);
                     }
                 }
             }
@@ -236,9 +236,9 @@ impl LoopState<'_> {
                     }
                 {
                     let [ox,oy,oz] = [
-                        ((ix * mx) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) as i32,
-                        ((iy * my) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) as i32,
-                        ((iz * mz) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) as i32,
+                        ((ix * mx) as i32).clamp(out_info.minimum(), out_info.maximum()),
+                        ((iy * my) as i32).clamp(out_info.minimum(), out_info.maximum()),
+                        ((iz * mz) as i32).clamp(out_info.minimum(), out_info.maximum()),
                     ];
 
                     mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cx.0, ox));

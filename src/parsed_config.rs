@@ -22,6 +22,7 @@ pub struct ParsedConfig {
     pub power_refresh_interval: u64,
     pub rumble_mul: [u64;2],
     pub parsed_gyro: Option<ParsedGyroConfig>,
+    pub dpad_to_hat_axis: Option<[AbsoluteAxisCode;2]>,
 }
 
 impl ParsedConfig {
@@ -36,20 +37,30 @@ impl ParsedConfig {
         let mut button_exclusions = HashSet::new();
         let mut additional_buttons = Vec::new();
 
-        if cfg.behavior.dpad_to_hat0 {
-            let mut add = |setup: UinputAbsSetup| {
-                axis_exclusions.insert(AbsoluteAxisCode(setup.code()));
+        let mut dpad_to_hat_axis = None;
+
+        if cfg.behavior.dpad_to_hat {
+            let abs = AbsInfo::new(0, -1, 1, 0, 0, 0);
+
+            let mut calc_dim = |dim: usize, alt: AbsoluteAxisCode| -> anyhow::Result<AbsoluteAxisCode> {
+                let axis = cfg.behavior.dpad_to_hat_axis
+                    .as_ref()
+                    .map(|v| match_axis_code(&v[dim]) )
+                    .transpose()?
+                    .unwrap_or(alt);
+
+                let setup = UinputAbsSetup::new(axis, abs);
+
+                axis_exclusions.insert(axis);
                 additional_axes.push(setup);
+
+                Ok(axis)
             };
 
-            add(UinputAbsSetup::new(
-                AbsoluteAxisCode::ABS_HAT0X,
-                AbsInfo::new(0, -1, 1, 0, 0, 0),
-            ));
-            add(UinputAbsSetup::new(
-                AbsoluteAxisCode::ABS_HAT0Y,
-                AbsInfo::new(0, -1, 1, 0, 0, 0),
-            ));
+            dpad_to_hat_axis = Some([
+                calc_dim(0, AbsoluteAxisCode::ABS_HAT0X)?,
+                calc_dim(1, AbsoluteAxisCode::ABS_HAT0Y)?,
+            ]);
         }
 
         let axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, axis_exclusions)?;
@@ -107,6 +118,7 @@ impl ParsedConfig {
             power_refresh_interval,
             rumble_mul,
             parsed_gyro,
+            dpad_to_hat_axis
         })
     }
 }

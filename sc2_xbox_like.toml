@@ -16,7 +16,7 @@ enable_rumble = true
 # whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
 dpad_to_dpad = false
 # whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
-dpad_to_hat0 = true
+dpad_to_hat = true
 
 [sdl_hints]
 SDL_JOYSTICK_LINUX_DEADZONES = "1"

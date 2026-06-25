@@ -14,12 +14,16 @@ pub mod event_loop;
 pub mod event_processing;
 pub mod simulated_gyro;
 
-pub fn init(cfg: &Config) -> anyhow::Result<()> {
-    eprintln!("\nConfig: {cfg:#?}");
+pub fn init(cfg: &Config, verbose: bool) -> anyhow::Result<()> {
+    if verbose {
+        eprintln!("\nConfig: {cfg:#?}");
+    }
 
     let parsed_config = ParsedConfig::parse(cfg).context("parsing context")?;
 
-    eprintln!("\nParsed Config: {parsed_config:#?}\n");
+    if verbose {
+        eprintln!("\nParsed Config: {parsed_config:#?}\n");
+    }
 
     entry(cfg, &parsed_config)
 }
