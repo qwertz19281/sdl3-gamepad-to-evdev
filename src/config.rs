@@ -14,6 +14,8 @@ pub struct Config {
     pub axis_map: HashMap<String,AxisMappingEnum>,
     #[serde(default)]
     pub sdl_hints: HashMap<String,String>,
+    #[serde(default)]
+    pub sticks: HashMap<String,StickGroup>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,8 +57,11 @@ pub struct SimulateGamepad {
     #[serde(default)]
     pub keep_open_out_gamepad: Option<bool>,
     #[serde(default)]
-    pub enable_rumble: bool,
+    pub emit_timestamp: bool,
+    #[serde(default)]
+    pub enable_rumble: bool, // TODO move to behavior?
 }
+
 #[derive(Debug, Deserialize)]
 pub struct SimulateGamepadGyro {
     pub enable: bool,
@@ -108,6 +113,11 @@ pub struct Behavior {
     pub simulate_digital_trigger: bool,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct StickGroup {
+    pub axis: [StringOrU16;2],
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 pub enum ButtonMappingEnum {
@@ -132,12 +142,15 @@ pub enum AxisMappingEnum {
 #[derive(Clone, Debug, Deserialize)]
 pub struct AxisMapping {
     pub key: StringOrU16,
+    /// from_range will not be used if stick correction is active
     #[serde(default)]
     pub from_range: Option<[i32;3]>,
     #[serde(default)]
     pub to_range: Option<[i32;3]>,
     #[serde(default)]
     pub out_range: Option<[i32;2]>,
+    #[serde(default)]
+    pub initial: Option<i32>,
     #[serde(default)]
     pub fuzz: Option<i32>,
     #[serde(default)]
@@ -170,6 +183,7 @@ impl AxisMappingEnum {
                 from_range: None,
                 to_range: None,
                 out_range: None,
+                initial: None,
                 fuzz: None,
                 flat: None,
                 res: None,

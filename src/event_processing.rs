@@ -8,8 +8,9 @@ use sdl3::{EventPump, EventSubsystem, GamepadSubsystem, Sdl};
 use sdl3_sys::events::{SDL_EVENT_FIRST, SDL_EVENT_LAST, SDL_GETEVENT, SDL_PeepEvents};
 use sdl3_sys::joystick::SDL_JoystickID;
 
+use crate::calibration::CalibrationState;
 use crate::simulated_gyro::SimulatedGamepadGyro;
-use crate::{FmtOpt, FmtOptHex};
+use crate::{Args, FmtOpt, FmtOptHex};
 use crate::button_tracker::ButtonTracker;
 use crate::config::Config;
 use crate::parsed_config::ParsedConfig;
@@ -24,11 +25,12 @@ pub struct LoopState<'a> {
     #[allow(unused)]
     pub event_subsystem: EventSubsystem,
     pub exit: bool,
-    pub input: Option<(SDL_JoystickID,Gamepad)>,
+    pub input: Option<(SDL_JoystickID,Gamepad,CalibrationState)>,
     pub output: Option<SimulatedGamepad>,
     pub motion_output: Option<SimulatedGamepadGyro>,
     pub cfg: &'a Config,
     pub parsed_config: &'a ParsedConfig,
+    pub app_args: &'a Args,
     pub tracker: ButtonTracker,
     pub tick: u64,
     pub last_power_check: u64,
@@ -139,7 +141,9 @@ impl LoopState<'_> {
                             let _ = v.sensor_set_enabled(SensorType::Gyroscope, false);
                         }
 
-                        self.input = Some((id, v));
+                        let calib = CalibrationState::create(self.cfg, self.parsed_config, self.app_args);
+
+                        self.input = Some((id, v, calib));
                         self.output = Some(out);
 
                         self.tracker = ButtonTracker::default();
@@ -152,7 +156,7 @@ impl LoopState<'_> {
 
             }
             Event::ControllerDeviceRemoved { which, .. } => {
-                if let Some((id, _)) = &mut self.input && *id == which {
+                if let Some((id, _, cs)) = &mut self.input && *id == which {
                     eprintln!("Gamepad disconnected");
                     SimulatedGamepad::close(&mut self.output)?;
                     SimulatedGamepadGyro::close(&mut self.motion_output)?;
@@ -164,8 +168,8 @@ impl LoopState<'_> {
                 self.exit = true;
             }
             Event::ControllerButtonDown { which, button, .. } | Event::ControllerButtonUp { which, button, .. } => {
-                if
-                    self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
+                if let Some((id,_,calib)) = self.input.as_mut()
+                    && id.0 == which
                     && let Some(out) = &mut self.output
                 {
                     let down = matches!(event, Event::ControllerButtonDown { .. });
@@ -187,8 +191,8 @@ impl LoopState<'_> {
                 }
             }
             Event::ControllerAxisMotion { which, axis, value, .. } => {
-                if
-                    self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
+                if let Some((id, _, calib)) = self.input.as_mut()
+                    && id.0 == which
                     && let Some(out) = &mut self.output
                 {
                     let mapping = self.parsed_config.axis_lut
@@ -198,7 +202,11 @@ impl LoopState<'_> {
                     let mstate = out.digitrigger_state
                         .get_mut(axis.to_ll().0 as usize);
 
-                    if let Some(m) = mapping && let Some(mstate) = mstate {
+                    if let Some(m) = mapping && let Some((mstate, _prev)) = mstate {
+                        if let Some((gi, dim)) = m.axisgroup {
+                            calib.set_axis(value, gi, dim);
+                        }
+
                         let in_offsetted = value as i64 - m.in_off;
                         let mut scaled = in_offsetted;
                         if scaled > 0 {
@@ -234,7 +242,7 @@ impl LoopState<'_> {
             }
             Event::ControllerSensorUpdated { which, sensor, data: [ix,iy,iz], .. } => {
                 if
-                    self.input.as_ref().is_some_and(|(id,_)| id.0 == which )
+                    self.input.as_ref().is_some_and(|(id,_,_)| id.0 == which )
                     //&& let Some(out) = &mut self.output
                     && let Some(mout) = &mut self.motion_output
                     && let Some(gicfg) = &self.parsed_config.parsed_gyro
@@ -258,6 +266,10 @@ impl LoopState<'_> {
                         ((iz * mz) as i32).clamp(out_info.minimum(), out_info.maximum()),
                     ];
 
+                    // if (ix * mx) as i64 != ((ix * mx) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _) {
+                    //     eprintln!("EXCITE DEO: {sensor:?}: {} != {}", (ix * mx) as i64, ((ix * mx) as i64).clamp(out_info.minimum() as _, out_info.maximum() as _));
+                    // }
+
                     mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cx.0, ox));
                     mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cy.0, oy));
                     mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cz.0, oz));
@@ -270,7 +282,7 @@ impl LoopState<'_> {
     }
 
     pub fn power_check(&mut self) -> anyhow::Result<()> {
-        if let Some((_,gp)) = &self.input {
+        if let Some((_,gp,_)) = &self.input {
             let PowerInfo { state, percentage } = gp.power_info();
             if self.last_power_info != Some((state,percentage)) {
                 eprintln!("Battery: {percentage}% ({state:?})");
@@ -321,7 +333,7 @@ impl LoopState<'_> {
         if !self.cfg.simulate_gamepad.enable_rumble {return Ok(());}
 
         let Some(out) = &mut self.output else {return Ok(())};
-        let Some((_,gp)) = &mut self.input else {return Ok(())};
+        let Some((_,gp,_)) = &mut self.input else {return Ok(())};
 
         out.fill_in_queue()?;
 

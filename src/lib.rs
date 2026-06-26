@@ -1,6 +1,7 @@
 use std::fmt;
 
 use anyhow::Context;
+use sdl3::gamepad::Button;
 
 use crate::config::Config;
 use crate::event_loop::entry;
@@ -13,19 +14,25 @@ pub mod button_tracker;
 pub mod event_loop;
 pub mod event_processing;
 pub mod simulated_gyro;
+pub mod calibration;
 
-pub fn init(cfg: &Config, verbose: bool) -> anyhow::Result<()> {
-    if verbose {
+pub fn init(cfg: &Config, args: Args) -> anyhow::Result<()> {
+    if args.dump_parse_config {
         eprintln!("\nConfig: {cfg:#?}");
     }
 
-    let parsed_config = ParsedConfig::parse(cfg).context("parsing context")?;
+    let parsed_config = ParsedConfig::parse(cfg, &args).context("parsing context")?;
 
-    if verbose {
+    if args.dump_parse_config {
         eprintln!("\nParsed Config: {parsed_config:#?}\n");
     }
 
-    entry(cfg, &parsed_config)
+    entry(cfg, &parsed_config, &args)
+}
+
+pub struct Args {
+    pub dump_parse_config: bool,
+    pub center_calib: Option<Button>,
 }
 
 struct FmtOpt<T>(T);

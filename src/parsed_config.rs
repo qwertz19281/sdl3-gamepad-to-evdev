@@ -7,7 +7,7 @@ use sdl3::gamepad::{Axis, Button};
 use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 
 use crate::config::{AxisMappingEnum, ButtonMappingEnum, Config, SimulateGamepad, StringOrU16, TrThreshold};
-use crate::none_vec;
+use crate::{Args, none_vec};
 use crate::simulated_gyro::ParsedGyroConfig;
 
 #[derive(Debug)]
@@ -23,10 +23,11 @@ pub struct ParsedConfig {
     pub rumble_mul: [u64;2],
     pub parsed_gyro: Option<ParsedGyroConfig>,
     pub dpad_to_hat_axis: Option<[AbsoluteAxisCode;2]>,
+    pub stickgroup: Vec<ParsedStickGroup>,
 }
 
 impl ParsedConfig {
-    pub fn parse(cfg: &Config) -> anyhow::Result<Self> {
+    pub fn parse(cfg: &Config, _app_args: &Args) -> anyhow::Result<Self> {
         let evdev_bus_type = cfg.simulate_gamepad.bus_type.clone().unwrap_or(BusType::BUS_USB.0.into());
         let evdev_bus_type = match_bus_type(&evdev_bus_type).context("parsing bus type")?;
 
@@ -63,7 +64,7 @@ impl ParsedConfig {
             ]);
         }
 
-        let axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, axis_exclusions)?;
+        let mut axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, axis_exclusions)?;
 
         if cfg.behavior.simulate_digital_trigger {
             let mut add = |code: KeyCode| {
@@ -79,6 +80,24 @@ impl ParsedConfig {
         }
 
         let button_bindings = parse_button_bindings(&cfg.button_map, !cfg.behavior.dpad_to_dpad, button_exclusions)?;
+
+        let mut stickgroup = Vec::with_capacity(cfg.sticks.len());
+
+        for (idx,(name,sg)) in cfg.sticks.iter().enumerate() {
+            let pag = ParsedStickGroup {
+                name: name.clone(),
+            };
+
+            for dim in [false,true] {
+                let id = match_sdl_axis(&sg.axis[dim as usize])?;
+
+                if let Some(b) = axis_bindings.get_mut(&id) {
+                    b.axisgroup = dbg!(Some((idx, dim)));
+                }
+            }
+
+            stickgroup.push(pag);
+        }
 
         let max_button_id = button_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadButton::COUNT.0);
         let mut button_lut = vec![u16::MAX; max_button_id as _];
@@ -118,7 +137,8 @@ impl ParsedConfig {
             power_refresh_interval,
             rumble_mul,
             parsed_gyro,
-            dpad_to_hat_axis
+            dpad_to_hat_axis,
+            stickgroup,
         })
     }
 }
@@ -143,6 +163,13 @@ pub struct ParsedAxisBinding {
     pub out_range: [i32;2],
     pub digitrigger_button: Option<KeyCode>,
     pub digitrigger_thresh: [i32;2],
+    /// (idx,dim)
+    pub axisgroup: Option<(usize,bool)>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ParsedStickGroup {
+    pub name: String,
 }
 
 fn parse_button_bindings(cfg: &HashMap<String,ButtonMappingEnum>, exclude_dpad: bool, mut exclusions: HashSet<KeyCode>) -> anyhow::Result<ParsedButtonBindings> {
@@ -201,6 +228,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
 
     let imin = if absolute {0} else {-32768};
 
+    let initial = cfg.initial.unwrap_or(0);
     let fuzz = cfg.fuzz.or(i.default_axis_fuzz).unwrap_or(0);
     let flat = cfg.flat.or(i.default_axis_flat).unwrap_or(0);
     let res = cfg.res.or(i.default_axis_res).unwrap_or(0);
@@ -208,6 +236,10 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
 
     if max < min {
         bail!("axis out_range must be smaller or equal number first");
+    }
+
+    if initial > max || initial < min {
+        bail!("axis initial value must be within out_range");
     }
 
     let imin = if min >= 0 {0} else {-32768};
@@ -266,7 +298,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
     Ok(ParsedAxisBinding {
         setup: UinputAbsSetup::new(
             code,
-            AbsInfo::new(0, min, max, fuzz, flat, res)
+            AbsInfo::new(initial, min, max, fuzz, flat, res)
         ),
         in_off,
         out_off,
@@ -276,6 +308,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
         out_range: [min,max],
         digitrigger_button,
         digitrigger_thresh,
+        axisgroup: None,
     })
 }
 
@@ -292,7 +325,7 @@ fn match_sdl_button(id: &StringOrU16) -> anyhow::Result<Button> {
     }
 }
 
-fn match_sdl_axis(id: &StringOrU16) -> anyhow::Result<Axis> {
+pub fn match_sdl_axis(id: &StringOrU16) -> anyhow::Result<Axis> {
     match id {
         StringOrU16::String(v) => match match_sdl_axis_string(v) {
             Some(v) => Ok(v),
@@ -305,7 +338,7 @@ fn match_sdl_axis(id: &StringOrU16) -> anyhow::Result<Axis> {
     }
 }
 
-fn match_key_code(id: &StringOrU16) -> anyhow::Result<KeyCode> {
+pub fn match_key_code(id: &StringOrU16) -> anyhow::Result<KeyCode> {
     match id {
         StringOrU16::String(v) => match match_key_code_string(v) {
             Some(v) if v.0 == u16::MAX => bail!("udev KeyCode not supported"),
@@ -316,7 +349,7 @@ fn match_key_code(id: &StringOrU16) -> anyhow::Result<KeyCode> {
     }
 }
 
-fn match_axis_code(id: &StringOrU16) -> anyhow::Result<AbsoluteAxisCode> {
+pub fn match_axis_code(id: &StringOrU16) -> anyhow::Result<AbsoluteAxisCode> {
     match id {
         StringOrU16::String(v) => match match_axis_code_string(v) {
             Some(v) => Ok(v),
@@ -326,7 +359,7 @@ fn match_axis_code(id: &StringOrU16) -> anyhow::Result<AbsoluteAxisCode> {
     }
 }
 
-pub(super) fn match_bus_type(id: &StringOrU16) -> anyhow::Result<BusType> {
+pub fn match_bus_type(id: &StringOrU16) -> anyhow::Result<BusType> {
     match id {
         StringOrU16::String(v) => match BusType::from_str(v) {
             Ok(v) => Ok(v),
@@ -336,19 +369,19 @@ pub(super) fn match_bus_type(id: &StringOrU16) -> anyhow::Result<BusType> {
     }
 }
 
-fn match_key_code_string(id: &str) -> Option<KeyCode> {
+pub fn match_key_code_string(id: &str) -> Option<KeyCode> {
     KeyCode::from_str(id).ok().or_else(||
         KeyCode::from_str(&format!("BTN_{}", id.to_uppercase())).ok()
     )
 }
 
-fn match_axis_code_string(id: &str) -> Option<AbsoluteAxisCode> {
+pub fn match_axis_code_string(id: &str) -> Option<AbsoluteAxisCode> {
     AbsoluteAxisCode::from_str(id).ok().or_else(||
         AbsoluteAxisCode::from_str(&format!("ABS_{}", id.to_uppercase())).ok()
     )
 }
 
-fn match_sdl_button_string(id: &str) -> Option<Button> {
+pub fn match_sdl_button_string(id: &str) -> Option<Button> {
     let id_lc = id.replace(['_',' '], "").to_lowercase();
 
     Some(match &*id_lc {
@@ -382,7 +415,7 @@ fn match_sdl_button_string(id: &str) -> Option<Button> {
     })
 }
 
-fn match_sdl_axis_string(id: &str) -> Option<Axis> {
+pub fn match_sdl_axis_string(id: &str) -> Option<Axis> {
     let id_lc = id.replace(['_',' '], "").to_lowercase();
 
     Some(match &*id_lc {

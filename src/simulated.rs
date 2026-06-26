@@ -1,7 +1,7 @@
 use std::io::{self, ErrorKind};
 use std::os::fd::AsRawFd as _;
 
-use evdev::{AttributeSet, FFEffectCode, InputEvent, InputId};
+use evdev::{AttributeSet, FFEffectCode, InputEvent, InputId, MiscCode};
 use evdev::uinput::VirtualDevice;
 
 use crate::config::Config;
@@ -14,7 +14,7 @@ pub struct SimulatedGamepad {
     pub in_queue: Vec<InputEvent>,
     pub ff_gain: i32,
     pub ff_slot: Vec<Option<SimpleRumbleSlot>>,
-    pub digitrigger_state: Vec<bool>,
+    pub digitrigger_state: Vec<(bool,i16)>,
 }
 
 impl SimulatedGamepad {
@@ -72,6 +72,14 @@ impl SimulatedGamepad {
                 .with_ff(&ff)?;
         }
 
+        if cfg.simulate_gamepad.emit_timestamp {
+            let mut misc = AttributeSet::new();
+            misc.insert(MiscCode::MSC_TIMESTAMP);
+
+            builder = builder
+                .with_msc(&misc)?;
+        }
+
         let dev = builder.build()?;
 
         // O_NONBLOCK is needed for polling rumble events without blocking the same thread
@@ -84,7 +92,7 @@ impl SimulatedGamepad {
             in_queue: Vec::with_capacity(32),
             ff_slot: none_vec(16),
             ff_gain: 65536,
-            digitrigger_state: vec![false; parsed.axis_lut.len()],
+            digitrigger_state: vec![(false,0); parsed.axis_lut.len()],
         })
     }
 

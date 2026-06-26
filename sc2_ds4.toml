@@ -52,7 +52,11 @@ guide = "mode"
 [axis_map]
 left_trigger = { key = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
 right_trigger = { key = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
-leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
-rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
-lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
-righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
+leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+
+[sticks]
+left = { axis = ["leftx","lefty"] }
+right = { axis = ["rightx","righty"] }
