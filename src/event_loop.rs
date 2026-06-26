@@ -61,6 +61,9 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig, app_args: &Args) -> any
             if cfg.simulate_gamepad.emit_timestamp && !out.queue.is_empty() {
                 out.queue.push(InputEvent::new(EventType::MISC.0, MiscCode::MSC_TIMESTAMP.0, (ls.tick / 1000) as i32));
             }
+            if let Some((_,_,calib)) = &mut ls.input {
+                calib.submit(out);
+            }
             out.submit()?;
         }
         if let Some(out) = &mut ls.motion_output {
@@ -75,10 +78,6 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig, app_args: &Args) -> any
                 eprintln!("Failed to check gamepad power: {e:#}");
             }
             ls.last_power_check = ls.tick;
-        }
-
-        if let Some((_,_,calib)) = &mut ls.input {
-            calib.submit();
         }
 
         if ls.exit {

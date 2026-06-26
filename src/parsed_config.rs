@@ -84,15 +84,28 @@ impl ParsedConfig {
         let mut stickgroup = Vec::with_capacity(cfg.sticks.len());
 
         for (idx,(name,sg)) in cfg.sticks.iter().enumerate() {
-            let pag = ParsedStickGroup {
+            let deadzone_release = sg.deadzone_release.unwrap_or(sg.deadzone);
+            let deadzone_bend = sg.deadzone_bend.unwrap_or(deadzone_release);
+
+            if sg.deadzone >= 1. || deadzone_bend < 0. || deadzone_release > sg.deadzone || deadzone_bend > deadzone_release {
+                bail!("deadzone must be >= deadzone_release, deadzone_release must be >= deadzone_bend");
+            }
+
+            let mut pag = ParsedStickGroup {
                 name: name.clone(),
+                axes: [Axis::LeftX,Axis::LeftY],
+                process: sg.process,
+                deadzone: sg.deadzone,
+                deadzone_release,
+                deadzone_bend,
             };
 
             for dim in [false,true] {
                 let id = match_sdl_axis(&sg.axis[dim as usize])?;
+                pag.axes[dim as usize] = id;
 
                 if let Some(b) = axis_bindings.get_mut(&id) {
-                    b.axisgroup = dbg!(Some((idx, dim)));
+                    b.axisgroup = Some((idx, dim));
                 }
             }
 
@@ -170,6 +183,11 @@ pub struct ParsedAxisBinding {
 #[derive(Clone, Debug)]
 pub struct ParsedStickGroup {
     pub name: String,
+    pub axes: [Axis;2],
+    pub process: bool,
+    pub deadzone: f32,
+    pub deadzone_release: f32,
+    pub deadzone_bend: f32,
 }
 
 fn parse_button_bindings(cfg: &HashMap<String,ButtonMappingEnum>, exclude_dpad: bool, mut exclusions: HashSet<KeyCode>) -> anyhow::Result<ParsedButtonBindings> {

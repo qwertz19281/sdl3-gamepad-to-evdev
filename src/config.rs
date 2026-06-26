@@ -116,6 +116,14 @@ pub struct Behavior {
 #[derive(Debug, Deserialize)]
 pub struct StickGroup {
     pub axis: [StringOrU16;2],
+    #[serde(default)]
+    pub process: bool,
+    #[serde(default)]
+    pub deadzone: f32,
+    #[serde(default)]
+    pub deadzone_release: Option<f32>,
+    #[serde(default)]
+    pub deadzone_bend: Option<f32>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

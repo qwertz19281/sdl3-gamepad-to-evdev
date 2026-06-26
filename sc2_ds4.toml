@@ -58,5 +58,7 @@ lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to
 righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
 
 [sticks]
-left = { axis = ["leftx","lefty"] }
-right = { axis = ["rightx","righty"] }
+# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
+right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

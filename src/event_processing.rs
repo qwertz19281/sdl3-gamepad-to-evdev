@@ -25,7 +25,7 @@ pub struct LoopState<'a> {
     #[allow(unused)]
     pub event_subsystem: EventSubsystem,
     pub exit: bool,
-    pub input: Option<(SDL_JoystickID,Gamepad,CalibrationState)>,
+    pub input: Option<(SDL_JoystickID,Gamepad,CalibrationState<'a>)>,
     pub output: Option<SimulatedGamepad>,
     pub motion_output: Option<SimulatedGamepadGyro>,
     pub cfg: &'a Config,
@@ -156,7 +156,7 @@ impl LoopState<'_> {
 
             }
             Event::ControllerDeviceRemoved { which, .. } => {
-                if let Some((id, _, cs)) = &mut self.input && *id == which {
+                if let Some((id, _, _)) = &mut self.input && *id == which {
                     eprintln!("Gamepad disconnected");
                     SimulatedGamepad::close(&mut self.output)?;
                     SimulatedGamepadGyro::close(&mut self.motion_output)?;
@@ -168,7 +168,7 @@ impl LoopState<'_> {
                 self.exit = true;
             }
             Event::ControllerButtonDown { which, button, .. } | Event::ControllerButtonUp { which, button, .. } => {
-                if let Some((id,_,calib)) = self.input.as_mut()
+                if let Some((id, _, _)) = self.input.as_mut()
                     && id.0 == which
                     && let Some(out) = &mut self.output
                 {
@@ -203,38 +203,38 @@ impl LoopState<'_> {
                         .get_mut(axis.to_ll().0 as usize);
 
                     if let Some(m) = mapping && let Some((mstate, _prev)) = mstate {
-                        if let Some((gi, dim)) = m.axisgroup {
-                            calib.set_axis(value, gi, dim);
-                        }
+                        if let Some((gi, dim)) = m.axisgroup
+                            && calib.set_axis(value, gi, dim)
+                        {} else {
+                            let in_offsetted = value as i64 - m.in_off;
+                            let mut scaled = in_offsetted;
+                            if scaled > 0 {
+                                scaled = scaled * m.pos_fraction[0] / m.pos_fraction[1];
+                            } else if scaled < 0 {
+                                scaled = scaled * m.neg_fraction[0] / m.neg_fraction[1];
+                            }
+                            let scaled = (scaled + m.out_off).clamp(m.clamp_out[0] as i64, m.clamp_out[1] as i64) as i32;
 
-                        let in_offsetted = value as i64 - m.in_off;
-                        let mut scaled = in_offsetted;
-                        if scaled > 0 {
-                            scaled = scaled * m.pos_fraction[0] / m.pos_fraction[1];
-                        } else if scaled < 0 {
-                            scaled = scaled * m.neg_fraction[0] / m.neg_fraction[1];
-                        }
-                        let scaled = (scaled + m.out_off).clamp(m.clamp_out[0] as i64, m.clamp_out[1] as i64) as i32;
+                            let evdev_event = InputEvent::new(EventType::ABSOLUTE.0, m.setup.code(), scaled);
+                            out.queue.push(evdev_event);
 
-                        let evdev_event = InputEvent::new(EventType::ABSOLUTE.0, m.setup.code(), scaled);
-                        out.queue.push(evdev_event);
+                            if self.cfg.behavior.simulate_digital_trigger
+                                && let Some(code) = m.digitrigger_button
+                                && m.digitrigger_thresh[0] != 0
+                            {
+                                let [press, release] = [m.digitrigger_thresh[0] as i64, m.digitrigger_thresh[1] as i64];
+                                // parse_config checked that press and release have same signum and sensible values
+                                let down = if *mstate {
+                                    in_offsetted.signum() == press.signum() && in_offsetted.abs() >= release.abs()
+                                } else {
+                                    in_offsetted.signum() == press.signum() && in_offsetted.abs() >= press.abs()
+                                };
 
-                        if self.cfg.behavior.simulate_digital_trigger
-                            && let Some(code) = m.digitrigger_button
-                            && m.digitrigger_thresh[0] != 0
-                        {
-                            let [press, release] = [m.digitrigger_thresh[0] as i64, m.digitrigger_thresh[1] as i64];
-                            // parse_config checked that press and release have same signum and sensible values
-                            let down = if *mstate {
-                                in_offsetted.signum() == press.signum() && in_offsetted.abs() >= release.abs()
-                            } else {
-                                in_offsetted.signum() == press.signum() && in_offsetted.abs() >= press.abs()
-                            };
-
-                            if *mstate != down {
-                                let evdev_event = InputEvent::new(EventType::KEY.0, code.0, down as _);
-                                out.queue.push(evdev_event);
-                                *mstate = down;
+                                if *mstate != down {
+                                    let evdev_event = InputEvent::new(EventType::KEY.0, code.0, down as _);
+                                    out.queue.push(evdev_event);
+                                    *mstate = down;
+                                }
                             }
                         }
                     }

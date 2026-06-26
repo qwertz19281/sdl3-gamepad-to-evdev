@@ -1,7 +1,6 @@
 use std::fmt;
 
 use anyhow::Context;
-use sdl3::gamepad::Button;
 
 use crate::config::Config;
 use crate::event_loop::entry;
@@ -32,7 +31,6 @@ pub fn init(cfg: &Config, args: Args) -> anyhow::Result<()> {
 
 pub struct Args {
     pub dump_parse_config: bool,
-    pub center_calib: Option<Button>,
 }
 
 struct FmtOpt<T>(T);
