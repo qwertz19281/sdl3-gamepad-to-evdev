@@ -40,12 +40,12 @@ right_stick = "thumbr"
 guide = "mode"
 
 [axis_map]
-left_trigger = { key = "z", out_range = [0,255] }
-right_trigger = { key = "rz", out_range = [0,255] }
-leftx = { key = "x", fuzz = 16, flat = 0 }
-rightx = { key = "rx", fuzz = 16, flat = 0 }
-lefty = { key = "y", fuzz = 16, flat = 0 }
-righty = { key = "ry", fuzz = 16, flat = 0 }
+left_trigger = { code = "z", out_range = [0,255] }
+right_trigger = { code = "rz", out_range = [0,255] }
+leftx = { code = "x", fuzz = 16, flat = 0 }
+rightx = { code = "rx", fuzz = 16, flat = 0 }
+lefty = { code = "y", fuzz = 16, flat = 0 }
+righty = { code = "ry", fuzz = 16, flat = 0 }
 
 [sticks]
 left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }

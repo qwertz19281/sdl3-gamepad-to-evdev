@@ -9,9 +9,9 @@ use sdl3_to_evdev::init;
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let data = fs::read(&args.config).context("Failed to read config file")?;
+    let data = fs::read(&args.config).context("reading config file")?;
 
-    let config = toml::from_slice::<Config>(&data).context("Failed to decode config file")?;
+    let config = toml::from_slice::<Config>(&data).context("decoding config file")?;
 
     let app_args = sdl3_to_evdev::Args {
         dump_parse_config: args.verbose,

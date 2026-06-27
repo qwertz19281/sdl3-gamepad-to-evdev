@@ -40,6 +40,8 @@ pub struct InputGamepad {
     /// currently defaults to 22
     #[serde(default)]
     pub input_event_batch_size: Option<usize>,
+    #[serde(default)]
+    pub sdl_gamepad_mapping: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -150,6 +152,7 @@ pub enum ButtonMappingEnum {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ButtonMapping {
+    #[serde(alias = "code")]
     pub key: StringOrU16,
     #[serde(default)]
     pub dpad: bool,
@@ -164,6 +167,7 @@ pub enum AxisMappingEnum {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AxisMapping {
+    #[serde(alias = "code")]
     pub key: StringOrU16,
     /// from_range will not be used if stick correction is active
     #[serde(default)]

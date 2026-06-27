@@ -12,6 +12,8 @@ wait_timeout_ms = 4
 # - filter_path: filter to device path (e.g. /dev/hidraw1234)
 # - power_refresh_interval: every n milliseconds, the power info (battery percentage and state) are queried, set 0 to disable
 # - input_event_batch_size: set the amount of events to be pulled from SDL3 at once
+# - sdl_gamepad_mapping: override SDL3's joystick-to-gamepad mapping information,
+#     these map the raw joystick-api button/axes indices to the sdl button/axis code we then map to evdev codes.
 
 [simulate_gamepad]
 name = "Sony Computer Entertainment Wireless Controller"
@@ -51,7 +53,9 @@ simulate_digital_trigger = true
 # - dpad_to_hat_axis: output axes for dpad_to_hat emulation. default ["hat0x","hat0y"]
 
 [button_map]
-# key matches the sdl input button, value is either string identifier, or axis code as decimal or hexadecimal number
+# key matches the sdl input button, value is the evdev keycode,
+# either: a string identifier, or a decimal or hexadecimal number, or a set of parameters with the key parameter
+# e.g.: foo = "bar", foo = 0x1234, foo = { code = "bar"/0x1234, dpad = false }
 south = "south"
 east = "east"
 north = "north"
@@ -65,15 +69,16 @@ right_stick = "thumbr"
 # steam button
 guide = "mode"
 # additional parameters:
-# - dpad: boolean mark button mapping as dpad button mapping, then it will only be active if dpad_to_dpad is enabled
+# - dpad: mark button mapping as dpad button mapping, then it will only be active if dpad_to_dpad is enabled. default: false
 
 [axis_map]
-left_trigger = { key = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
-right_trigger = { key = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
-leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
-rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
-lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
-righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+# key is sdl3 axis code, value is evdev absolute axis code (string or number), or set of parameters
+left_trigger = { code = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
+right_trigger = { code = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
+leftx = { code = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+rightx = { code = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+lefty = { code = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+righty = { code = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
 # additional parameters:
 # - out_range: evdev output data range,
 # - digitrigger_button: what button should be emitted when pressing down to specified threshold

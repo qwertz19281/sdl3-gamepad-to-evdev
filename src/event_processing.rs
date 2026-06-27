@@ -77,7 +77,7 @@ impl LoopState<'_> {
                     }
 
                     if !in_cfg.filter_path.slice().is_empty() {
-                        let path = path.context("Failed to query path")?;
+                        let path = path.context("querying gamepad path")?;
 
                         if !in_cfg.filter_path.slice().iter().any(|v| path.contains(v) ) {
                             return Ok(None);
@@ -85,7 +85,7 @@ impl LoopState<'_> {
                     }
 
                     if !in_cfg.filter_vendor_id.slice().is_empty() {
-                        let v = vendor.context("Failed to query vendor id")?;
+                        let v = vendor.context("querying gamepad vendor id")?;
 
                         if !in_cfg.filter_vendor_id.slice().contains(&v) {
                             return Ok(None);
@@ -93,7 +93,7 @@ impl LoopState<'_> {
                     }
 
                     if !in_cfg.filter_product_id.slice().is_empty() {
-                        let v = product.context("Failed to query product id")?;
+                        let v = product.context("querying gamepad product id")?;
 
                         if !in_cfg.filter_product_id.slice().contains(&v) {
                             return Ok(None);
@@ -101,7 +101,7 @@ impl LoopState<'_> {
                     }
 
                     if !in_cfg.filter_product_version.slice().is_empty() {
-                        let v = version.context("Failed to query product version")?;
+                        let v = version.context("querying gamepad product version")?;
 
                         if !in_cfg.filter_product_version.slice().contains(&v) {
                             return Ok(None);
@@ -116,7 +116,7 @@ impl LoopState<'_> {
                 };
 
                 match try_open() {
-                    Ok(Some(v)) => {
+                    Ok(Some(mut gamepad)) => {
                         SimulatedGamepad::close(&mut self.output)?;
                         SimulatedGamepadGyro::close(&mut self.motion_output)?;
 
@@ -129,28 +129,39 @@ impl LoopState<'_> {
                         {
                             let out = SimulatedGamepadGyro::create(self.cfg, gicfg, self.parsed_config, pgicfg)?;
 
-                            v.sensor_set_enabled(SensorType::Accelerometer, true)?;
-                            v.sensor_set_enabled(SensorType::Gyroscope, true)?;
+                            gamepad.sensor_set_enabled(SensorType::Accelerometer, true)?;
+                            gamepad.sensor_set_enabled(SensorType::Gyroscope, true)?;
 
                             self.motion_output = Some(out);
                         } else {
                             // Disable unusede sensors to maybe reduce gamepad battery usage
-                            let _ = v.sensor_set_enabled(SensorType::AccelerometerLeft, false);
-                            let _ = v.sensor_set_enabled(SensorType::AccelerometerRight, false);
-                            let _ = v.sensor_set_enabled(SensorType::GyroscopeLeft, false);
-                            let _ = v.sensor_set_enabled(SensorType::GyroscopeRight, false);
-                            let _ = v.sensor_set_enabled(SensorType::Accelerometer, false);
-                            let _ = v.sensor_set_enabled(SensorType::Gyroscope, false);
+                            let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerLeft, false);
+                            let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerRight, false);
+                            let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeLeft, false);
+                            let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeRight, false);
+                            let _ = gamepad.sensor_set_enabled(SensorType::Accelerometer, false);
+                            let _ = gamepad.sensor_set_enabled(SensorType::Gyroscope, false);
                         }
 
+                        
+                        eprintln!("Opened gamepad: {formatted_name}");
+
+                        if let Some(mapping) = &self.cfg.input_gamepad.sdl_gamepad_mapping {
+                            gamepad.set_mapping(mapping).context("setting sdl gamepad mapping")?;
+                        }
+                        
+                        if self.app_args.dump_parse_config {
+                            match gamepad.mapping() {
+                                Some(mapping) => eprintln!("SDL gamepad mapping: {mapping}"),
+                                None => eprintln!("Failed to retrieve SDL gamepad mapping"),
+                            }
+                        }
+                        
+                        self.tracker = ButtonTracker::default();
                         let calib = CalibrationState::create(self.cfg, self.parsed_config, self.app_args);
 
-                        self.input = Some((id, v, calib));
+                        self.input = Some((id, gamepad, calib));
                         self.output = Some(out);
-
-                        self.tracker = ButtonTracker::default();
-
-                        eprintln!("Opened gamepad: {formatted_name}");
                     },
                     Ok(None) => eprintln!("Ignore gamepad: {formatted_name}"),
                     Err(e) => eprintln!("Failed to open gamepad: {formatted_name}: {e:#}"),
