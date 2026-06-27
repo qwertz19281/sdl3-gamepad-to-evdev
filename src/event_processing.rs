@@ -42,161 +42,6 @@ pub struct LoopState<'a> {
 impl LoopState<'_> {
     pub fn process_event(&mut self, event: Event) -> anyhow::Result<()> {
         match event {
-            Event::ControllerDeviceAdded { which, .. } => {
-                let id = SDL_JoystickID(which);
-
-                let name = self.gamepad_subsystem.name_for_id(id);
-                let vendor = self.gamepad_subsystem.vendor_for_id(id);
-                let product = self.gamepad_subsystem.product_for_id(id);
-                let version = self.gamepad_subsystem.product_version_for_id(id);
-                let path = self.gamepad_subsystem.path_for_id(id);
-                let guid = self.gamepad_subsystem.guid_for_id(id).to_string();
-
-                let in_cfg = &self.cfg.input_gamepad;
-
-                let formatted_name = format!(
-                    "{} ({}:{} ver. {}) ({} @ {})",
-                    FmtOpt(&name.as_deref().ok()),
-                    FmtOptHex(&vendor), FmtOptHex(&product), FmtOptHex(&version),
-                    guid, FmtOpt(&path)
-                );
-
-                let mut formatted_serial = String::new();
-
-                fn check_str(filter: &SingleOrArray<String>, check: &Option<String>) -> Option<bool> {
-                    let filter = filter.slice();
-                    
-                    if !filter.is_empty() {
-                        let Some(check) = check else {return None};
-
-                        return Some(filter.iter().any(|v| v.contains(check) ));
-                    }
-
-                    Some(true)
-                }
-
-                fn check_num<T>(filter: &SingleOrArray<T>, check: &Option<T>) -> Option<bool> where T: Eq {
-                    let filter = filter.slice();
-                    
-                    if !filter.is_empty() {
-                        let Some(check) = check else {return None};
-
-                        return Some(filter.contains(check));
-                    }
-
-                    Some(true)
-                }
-
-                fn check_str_result<E>(filter: &SingleOrArray<String>, check: &Result<String,E>) -> anyhow::Result<bool> where E: Error {
-                    let filter = filter.slice();
-
-                    if !filter.is_empty() {
-                        let check = match check {
-                            Ok(v) => v,
-                            Err(e) => bail!("{e}"),
-                        };
-
-                        return Ok(filter.iter().any(|v| v.contains(check) ));
-                    }
-
-                    Ok(true)
-                }
-
-                let mut try_open = || -> anyhow::Result<Option<Gamepad>> {
-                    if self.input.is_some() {
-                        return Ok(None);
-                    }
-
-                    if !check_str_result(&in_cfg.filter_name, &name).context("querying gamepad name")?
-                        || !check_str_result(&in_cfg.filter_path, &path).context("querying gamepad path")?
-                        || (!in_cfg.filter_guid.slice().is_empty() && !in_cfg.filter_guid.slice().iter().any(|v| guid.contains(v) ))
-                        || !check_num(&in_cfg.filter_vendor_id, &vendor).context("querying vendor id")?
-                        || !check_num(&in_cfg.filter_product_id, &product).context("querying product id")?
-                        || !check_num(&in_cfg.filter_product_version, &version).context("querying product version")?
-                    {
-                        return Ok(None);
-                    }
-
-                    let opened = self.gamepad_subsystem.open(id).context("querying gamepad metadata")?;
-
-                    let fw_version = opened.firmware_version();
-                    let serial = opened.serial_number();
-
-                    formatted_serial = format!("(snr: {}, fw: {})", FmtOpt(&serial), FmtOptHex(&fw_version));
-
-                    if !check_str(&in_cfg.filter_serial, &serial).context("querying gamepad serial")?
-                        || !check_num(&in_cfg.filter_fw_version, &fw_version).context("querying gamepad fw version")?
-                    {
-                        // closing it right away
-                        return Ok(None);
-                    }
-
-                    Ok(Some(opened))
-                };
-
-                match try_open() {
-                    Ok(Some(mut gamepad)) => {
-                        SimulatedGamepad::close(&mut self.output)?;
-                        SimulatedGamepadGyro::close(&mut self.motion_output)?;
-
-                        let out = SimulatedGamepad::create(self.cfg, self.parsed_config)?;
-
-                        if
-                            let Some(gicfg) = &self.cfg.simulate_gamepad_gyro
-                            && let Some(pgicfg) = &self.parsed_config.parsed_gyro
-                            && gicfg.enable
-                        {
-                            let out = SimulatedGamepadGyro::create(self.cfg, gicfg, self.parsed_config, pgicfg)?;
-
-                            gamepad.sensor_set_enabled(SensorType::Accelerometer, true)?;
-                            gamepad.sensor_set_enabled(SensorType::Gyroscope, true)?;
-
-                            self.motion_output = Some(out);
-                        } else {
-                            // Disable unused sensors to maybe reduce gamepad battery usage
-                            let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerLeft, false);
-                            let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerRight, false);
-                            let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeLeft, false);
-                            let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeRight, false);
-                            let _ = gamepad.sensor_set_enabled(SensorType::Accelerometer, false);
-                            let _ = gamepad.sensor_set_enabled(SensorType::Gyroscope, false);
-                        }
-
-                        eprintln!("Opened gamepad: {formatted_name} {formatted_serial}");
-
-                        if let Some(mapping) = &self.cfg.input_gamepad.sdl_gamepad_mapping {
-                            gamepad.set_mapping(mapping).context("setting sdl gamepad mapping")?;
-                        }
-                        
-                        if self.app_args.verbose {
-                            match gamepad.mapping() {
-                                Some(mapping) => eprintln!("SDL gamepad mapping: {mapping}"),
-                                None => eprintln!("Failed to retrieve SDL gamepad mapping"),
-                            }
-                        }
-                        
-                        self.tracker = ButtonTracker::default();
-                        let calib = CalibrationState::create(self.cfg, self.parsed_config, self.app_args);
-
-                        self.input = Some((id, gamepad, calib));
-                        self.output = Some(out);
-                    },
-                    Ok(None) => eprintln!("Ignore gamepad: {formatted_name} {formatted_serial}"),
-                    Err(e) => eprintln!("Failed to open gamepad: {formatted_name} {formatted_serial}: {e:#}"),
-                }
-            }
-            Event::ControllerDeviceRemoved { which, .. } => {
-                if let Some((id, _, _)) = &mut self.input && *id == which {
-                    eprintln!("Gamepad disconnected");
-                    SimulatedGamepad::close(&mut self.output)?;
-                    SimulatedGamepadGyro::close(&mut self.motion_output)?;
-                    self.input = None;
-                }
-            }
-            Event::Quit { .. } => {
-                eprintln!("Quitting");
-                self.exit = true;
-            }
             Event::ControllerButtonDown { which, button, .. } | Event::ControllerButtonUp { which, button, .. } => {
                 if let Some((id, _, _)) = self.input.as_mut()
                     && id.0 == which
@@ -335,6 +180,21 @@ impl LoopState<'_> {
                     mout.queue.push(InputEvent::new(EventType::ABSOLUTE.0, cz.0, oz));
                 }
             }
+            Event::ControllerDeviceAdded { which, .. } => {
+                self.add_controller(which)?;
+            }
+            Event::ControllerDeviceRemoved { which, .. } => {
+                if let Some((id, _, _)) = &mut self.input && *id == which {
+                    eprintln!("Gamepad disconnected");
+                    SimulatedGamepad::close(&mut self.output)?;
+                    SimulatedGamepadGyro::close(&mut self.motion_output)?;
+                    self.input = None;
+                }
+            }
+            Event::Quit { .. } => {
+                eprintln!("Quitting");
+                self.exit = true;
+            }
             _ => {}
         }
 
@@ -350,43 +210,6 @@ impl LoopState<'_> {
             self.last_power_info = Some((state,percentage));
         }
         Ok(())
-    }
-
-    pub fn pull_event_batch(&mut self, max: usize, wait_ms: u32) -> Vec<Event> {
-        let first = self.event_pump.wait_event_timeout_ms(wait_ms);
-
-        let Some(first) = first else {return vec![]};
-
-        let mut staging_vec = Vec::with_capacity(max-1);
-        let mut out_vec = Vec::with_capacity(max);
-
-        out_vec.push(first);
-
-        if max > 1 {
-            let result = unsafe {
-                SDL_PeepEvents(
-                    staging_vec.as_mut_ptr(),
-                    max as i32 - 1,
-                    SDL_GETEVENT,
-                    SDL_EVENT_FIRST.into(),
-                    SDL_EVENT_LAST.into(),
-                )
-            };
-
-            if result < 0 {
-                panic!("SDL_PeepEvents error {result}");
-            }
-
-            unsafe {
-                staging_vec.set_len(result as _);
-            }
-
-            for v in staging_vec {
-                out_vec.push(Event::from_ll(v));
-            }
-        }
-
-        out_vec
     }
 
     pub fn process_rumble(&mut self) -> anyhow::Result<()> {
@@ -448,5 +271,188 @@ impl LoopState<'_> {
         }
 
         Ok(())
+    }
+
+    pub fn add_controller(&mut self, which: u32) -> anyhow::Result<()> {
+        let id = SDL_JoystickID(which);
+
+        let name = self.gamepad_subsystem.name_for_id(id);
+        let vendor = self.gamepad_subsystem.vendor_for_id(id);
+        let product = self.gamepad_subsystem.product_for_id(id);
+        let version = self.gamepad_subsystem.product_version_for_id(id);
+        let path = self.gamepad_subsystem.path_for_id(id);
+        let guid = self.gamepad_subsystem.guid_for_id(id).to_string();
+
+        let in_cfg = &self.cfg.input_gamepad;
+
+        let formatted_name = format!(
+            "{} ({}:{} ver. {}) ({} @ {})",
+            FmtOpt(&name.as_deref().ok()),
+            FmtOptHex(&vendor), FmtOptHex(&product), FmtOptHex(&version),
+            guid, FmtOpt(&path)
+        );
+
+        let mut formatted_serial = String::new();
+
+        fn check_str(filter: &SingleOrArray<String>, check: &Option<String>) -> Option<bool> {
+            let filter = filter.slice();
+            
+            if !filter.is_empty() {
+                let Some(check) = check else {return None};
+
+                return Some(filter.iter().any(|v| v.contains(check) ));
+            }
+
+            Some(true)
+        }
+
+        fn check_num<T>(filter: &SingleOrArray<T>, check: &Option<T>) -> Option<bool> where T: Eq {
+            let filter = filter.slice();
+            
+            if !filter.is_empty() {
+                let Some(check) = check else {return None};
+
+                return Some(filter.contains(check));
+            }
+
+            Some(true)
+        }
+
+        fn check_str_result<E>(filter: &SingleOrArray<String>, check: &Result<String,E>) -> anyhow::Result<bool> where E: Error {
+            let filter = filter.slice();
+
+            if !filter.is_empty() {
+                let check = match check {
+                    Ok(v) => v,
+                    Err(e) => bail!("{e}"),
+                };
+
+                return Ok(filter.iter().any(|v| v.contains(check) ));
+            }
+
+            Ok(true)
+        }
+
+        let mut try_open = || -> anyhow::Result<Option<Gamepad>> {
+            if self.input.is_some() {
+                return Ok(None);
+            }
+
+            if !check_str_result(&in_cfg.filter_name, &name).context("querying gamepad name")?
+                || !check_str_result(&in_cfg.filter_path, &path).context("querying gamepad path")?
+                || (!in_cfg.filter_guid.slice().is_empty() && !in_cfg.filter_guid.slice().iter().any(|v| guid.contains(v) ))
+                || !check_num(&in_cfg.filter_vendor_id, &vendor).context("querying vendor id")?
+                || !check_num(&in_cfg.filter_product_id, &product).context("querying product id")?
+                || !check_num(&in_cfg.filter_product_version, &version).context("querying product version")?
+            {
+                return Ok(None);
+            }
+
+            let opened = self.gamepad_subsystem.open(id).context("querying gamepad metadata")?;
+
+            let fw_version = opened.firmware_version();
+            let serial = opened.serial_number();
+
+            formatted_serial = format!("(snr: {}, fw: {})", FmtOpt(&serial), FmtOptHex(&fw_version));
+
+            if !check_str(&in_cfg.filter_serial, &serial).context("querying gamepad serial")?
+                || !check_num(&in_cfg.filter_fw_version, &fw_version).context("querying gamepad fw version")?
+            {
+                // closing it right away
+                return Ok(None);
+            }
+
+            Ok(Some(opened))
+        };
+
+        match try_open() {
+            Ok(Some(mut gamepad)) => {
+                SimulatedGamepad::close(&mut self.output)?;
+                SimulatedGamepadGyro::close(&mut self.motion_output)?;
+
+                let out = SimulatedGamepad::create(self.cfg, self.parsed_config)?;
+
+                if
+                    let Some(gicfg) = &self.cfg.simulate_gamepad_gyro
+                    && let Some(pgicfg) = &self.parsed_config.parsed_gyro
+                    && gicfg.enable
+                {
+                    let out = SimulatedGamepadGyro::create(self.cfg, gicfg, self.parsed_config, pgicfg)?;
+
+                    gamepad.sensor_set_enabled(SensorType::Accelerometer, true)?;
+                    gamepad.sensor_set_enabled(SensorType::Gyroscope, true)?;
+
+                    self.motion_output = Some(out);
+                } else {
+                    // Disable unused sensors to maybe reduce gamepad battery usage
+                    let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerLeft, false);
+                    let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerRight, false);
+                    let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeLeft, false);
+                    let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeRight, false);
+                    let _ = gamepad.sensor_set_enabled(SensorType::Accelerometer, false);
+                    let _ = gamepad.sensor_set_enabled(SensorType::Gyroscope, false);
+                }
+
+                eprintln!("Opened gamepad: {formatted_name} {formatted_serial}");
+
+                if let Some(mapping) = &self.cfg.input_gamepad.sdl_gamepad_mapping {
+                    gamepad.set_mapping(mapping).context("setting sdl gamepad mapping")?;
+                }
+                
+                if self.app_args.verbose {
+                    match gamepad.mapping() {
+                        Some(mapping) => eprintln!("SDL gamepad mapping: {mapping}"),
+                        None => eprintln!("Failed to retrieve SDL gamepad mapping"),
+                    }
+                }
+                
+                self.tracker = ButtonTracker::default();
+                let calib = CalibrationState::create(self.cfg, self.parsed_config, self.app_args);
+
+                self.input = Some((id, gamepad, calib));
+                self.output = Some(out);
+            },
+            Ok(None) => eprintln!("Ignore gamepad: {formatted_name} {formatted_serial}"),
+            Err(e) => eprintln!("Failed to open gamepad: {formatted_name} {formatted_serial}: {e:#}"),
+        }
+
+        Ok(())
+    }
+
+    pub fn pull_event_batch(&mut self, max: usize, wait_ms: u32) -> Vec<Event> {
+        let first = self.event_pump.wait_event_timeout_ms(wait_ms);
+
+        let Some(first) = first else {return vec![]};
+
+        let mut staging_vec = Vec::with_capacity(max-1);
+        let mut out_vec = Vec::with_capacity(max);
+
+        out_vec.push(first);
+
+        if max > 1 {
+            let result = unsafe {
+                SDL_PeepEvents(
+                    staging_vec.as_mut_ptr(),
+                    max as i32 - 1,
+                    SDL_GETEVENT,
+                    SDL_EVENT_FIRST.into(),
+                    SDL_EVENT_LAST.into(),
+                )
+            };
+
+            if result < 0 {
+                panic!("SDL_PeepEvents error {result}");
+            }
+
+            unsafe {
+                staging_vec.set_len(result as _);
+            }
+
+            for v in staging_vec {
+                out_vec.push(Event::from_ll(v));
+            }
+        }
+
+        out_vec
     }
 }
