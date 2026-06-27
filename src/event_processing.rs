@@ -134,7 +134,7 @@ impl LoopState<'_> {
 
                             self.motion_output = Some(out);
                         } else {
-                            // Disable unusede sensors to maybe reduce gamepad battery usage
+                            // Disable unused sensors to maybe reduce gamepad battery usage
                             let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerLeft, false);
                             let _ = gamepad.sensor_set_enabled(SensorType::AccelerometerRight, false);
                             let _ = gamepad.sensor_set_enabled(SensorType::GyroscopeLeft, false);

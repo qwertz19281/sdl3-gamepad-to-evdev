@@ -83,7 +83,7 @@ impl ParsedConfig {
         }
 
         let mut axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, &mut axis_exclusions).context("parsing axis mappings")?;
-        let hat_bindings = parse_hat_bindings(&cfg.hats, &mut axis_exclusions).context("parsing hat mappings")?;
+        let hat_bindings = parse_hat_bindings(&cfg.hat_map, &mut axis_exclusions).context("parsing hat mappings")?;
 
         if cfg.behavior.simulate_digital_trigger {
             let mut add = |code: KeyCode| {

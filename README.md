@@ -28,9 +28,9 @@ cargo install --locked --git https://github.com/qwertz19281/sdl3-to-evdev --bran
 
 | feature flag | description |
 | --- | --- |
-| none | build sdl3 from source for sdl3-to-evdev, look for sdl3 source/headers via pkg-config. A recent sdl3 version like 3.4.10 should be provided. |
-`build_sdl3` | build sdl3 from source for sdl3-to-evdev.
-`build_sdl3_static` | build sdl3 from source and statically link into sdl3-to-evdev, for self-contained binary.
+| none | A recent SDL3 version like 3.4.10 should be provided. |
+`build_sdl3` | Build SDL3 from source for SDL3-to-evdev.
+`build_sdl3_static` | Build SDL3 from source and statically link into sdl3-to-evdev, for self-contained binary.
 
 # Run
 

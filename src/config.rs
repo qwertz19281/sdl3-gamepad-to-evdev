@@ -19,8 +19,8 @@ pub struct Config {
     pub sdl_hints: HashMap<String,String>,
     #[serde(default)]
     pub sticks: HashMap<String,StickGroup>,
-    #[serde(default, alias = "hat_map")]
-    pub hats: HashMap<u8,[StringOrU16;2]>,
+    #[serde(default, alias = "hats")]
+    pub hat_map: HashMap<u8,[StringOrU16;2]>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,8 +37,6 @@ pub struct InputGamepad {
     pub filter_guid: SingleOrArray<String>,
     #[serde(default)]
     pub filter_path: SingleOrArray<String>,
-    #[serde(default)]
-    pub filter_serial: SingleOrArray<String>,
     #[serde(default)]
     pub wait_timeout_ms: Option<u32>,
     #[serde(default)]
