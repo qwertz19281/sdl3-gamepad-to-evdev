@@ -12,7 +12,7 @@ name = "Microsoft X-Box One Elite pad"
 bus_type = "BUS_USB"
 vendor_id = 0x045e
 product_id = 0x02e3
-version = 0x1
+version = 0x0203
 # enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
 enable_rumble = true
 

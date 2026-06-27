@@ -116,7 +116,6 @@ impl LoopState<'_> {
                 }
             }
             Event::JoyHatMotion { which, hat_idx, state, .. } => {
-                eprintln!("HATTER: {state:?}");
                 if let Some((id, _, _)) = self.input.as_mut()
                     && id.0 == which
                     && let Some(out) = &mut self.output

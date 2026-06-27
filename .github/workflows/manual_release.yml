@@ -41,13 +41,19 @@ jobs:
 
       - name: Build release binary
         run: |
+          set -e
+          
           export RUSTFLAGS="-C target-cpu=${{ inputs.march }}" CFLAGS="-march=${{ inputs.march }}" CXXFLAGS="-march=${{ inputs.march }}"
           cargo clean
-          cargo build --release --features "build_sdl3_static"
+          
+          cargo test -r --features "build_sdl3_static"
+          cargo build -r --features "build_sdl3_static"
 
       - name: Prepare release asset
         run: |
-          BINARY_NAME="sdl3toevdev"
+          set -e
+          
+          BINARY_NAME="sdl3_to_evdev"
           VERSION="${{ inputs.release_tag }}"
           MARCH="${{ inputs.march }}"
           ARCHIVE_NAME="${BINARY_NAME}-${VERSION}-linux-static-sdl3-${MARCH}-amd64.zip"

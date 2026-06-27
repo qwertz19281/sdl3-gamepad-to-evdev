@@ -1,6 +1,6 @@
 # SDL3 gamepad to evdev bridge
 
-This program can bridge a SDL3-compatible gamepad to a virtual evdev gamepad.
+This CLI program can bridge a SDL3-compatible gamepad to a virtual evdev gamepad.
 
 This for examples allows to use the new Steam Controller with older games without SDL3 or native Steam Controller support, without Steam / Steam Input.
 
@@ -13,7 +13,7 @@ Current Features:
 Not (yet) implemented:
 - Touchpad
 - HD rumble (not supported by SDL3, would require gamepad-specific raw commands/effects)
-- multiple gamepads (can be worked around by running multiple instances)
+- multiple gamepads (can be worked around by running multiple instances, and by filtering by gamepad serial)
 - sdl3_joystick without sdl3_gamepad support
 
 # Install
@@ -23,7 +23,7 @@ Not (yet) implemented:
 ## Build & install with cargo
 
 ```sh
-cargo install --locked --git https://github.com/qwertz19281/sdl3-to-evdev --branch release --features "build_sdl3_static"
+cargo install --locked --git https://github.com/qwertz19281/sdl3-gamepad-to-evdev --branch release --features "build_sdl3_static"
 ```
 
 | feature flag | description |
