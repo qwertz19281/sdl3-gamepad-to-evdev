@@ -1,0 +1,61 @@
+[input_gamepad]
+#filter_name = "Steam Controller"
+# 0x28DE (valve)
+filter_vendor_id = 0x28DE
+# steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+filter_product_id = [0x1304,0x1302,0x1303]
+wait_timeout_ms = 4
+
+[simulate_gamepad]
+name = "Sony Computer Entertainment Wireless Controller"
+bus_type = "BUS_USB"
+vendor_id = 0x54c
+product_id = 0x5c4
+version = 0x8111
+# enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
+enable_rumble = true
+
+# SUBSYSTEM=="input", ATTRS{name}=="Sony Computer Entertainment Wireless Controller Motion Sensors", MODE="0660", TAG+="uaccess"
+[simulate_gamepad_gyro]
+enable = true
+name = "Sony Computer Entertainment Wireless Controller Motion Sensors"
+vendor_id = 0x54c
+product_id = 0x5c4
+version = 0x8111
+
+[behavior]
+# whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
+dpad_to_dpad = false
+# whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
+dpad_to_hat = true
+rumble_multiplier_left = 1.0
+rumble_multiplier_right = 1.0
+simulate_digital_trigger = true
+
+[button_map]
+south = "south"
+east = "east"
+north = "north"
+west = "west"
+start = "start"
+back = "select"
+left_shoulder = "tl"
+right_shoulder = "tr"
+left_stick = "thumbl"
+right_stick = "thumbr"
+# steam button
+guide = "mode"
+
+[axis_map]
+left_trigger = { key = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
+right_trigger = { key = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
+leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
+
+[sticks]
+# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
+right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

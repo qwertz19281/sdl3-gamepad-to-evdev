@@ -32,9 +32,6 @@ rumble_multiplier_left = 1.0
 rumble_multiplier_right = 1.0
 simulate_digital_trigger = true
 
-[sdl_hints]
-SDL_JOYSTICK_LINUX_DEADZONES = "1"
-
 [button_map]
 south = "south"
 east = "east"
@@ -49,11 +46,12 @@ right_stick = "thumbr"
 # steam button
 guide = "mode"
 # quick access button
-"misc1" = "base"
-"left_paddle1" = "trigger_happy1"
-"right_paddle1" = "trigger_happy2"
-"left_paddle2" = "trigger_happy3"
-"right_paddle2" = "trigger_happy4"
+misc1 = "base"
+left_paddle1 = 0x224 # BTN_GRIPL
+right_paddle1 = 0x225 # BTN_GRIPR
+left_paddle2 = 0x226 # BTN_GRIPL2
+right_paddle2 = 0x227 # BTN_GRIPR2
+
 
 [axis_map]
 left_trigger = { key = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
@@ -62,3 +60,9 @@ leftx = { key = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to
 rightx = { key = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 lefty = { key = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 righty = { key = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
+
+[sticks]
+# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
+right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

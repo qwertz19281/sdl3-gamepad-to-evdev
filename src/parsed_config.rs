@@ -88,7 +88,7 @@ impl ParsedConfig {
             let deadzone_bend = sg.deadzone_bend.unwrap_or(deadzone_release);
 
             if sg.deadzone >= 1. || deadzone_bend < 0. || deadzone_release > sg.deadzone || deadzone_bend > deadzone_release {
-                bail!("deadzone must be >= deadzone_release, deadzone_release must be >= deadzone_bend");
+                bail!("stickgroup: must be: deadzone >= deadzone_release, deadzone_release >= deadzone_bend, deadzone_bend >= 0");
             }
 
             let mut pag = ParsedStickGroup {
@@ -98,9 +98,23 @@ impl ParsedConfig {
                 deadzone: sg.deadzone,
                 deadzone_release,
                 deadzone_bend,
+                in_scale: sg.in_scale.unwrap_or(1.),
+                out_scale: sg.out_scale.unwrap_or(1.),
+                out_clamp: sg.out_clamp.unwrap_or(1.01),
             };
 
-            for dim in [false,true] {
+            if !(
+                pag.deadzone.is_finite() && pag.deadzone_release.is_finite() && pag.deadzone_bend.is_finite()
+                && pag.in_scale.is_finite() && pag.out_scale.is_finite() && pag.out_clamp.is_finite()
+            ) {
+                bail!("stickgroup has invalid float values");
+            }
+
+            if pag.out_clamp < 0. {
+                bail!("stickgroup: out_clamp must not be negative");
+            }
+
+            for dim in [false, true] {
                 let id = match_sdl_axis(&sg.axis[dim as usize])?;
                 pag.axes[dim as usize] = id;
 
@@ -188,6 +202,9 @@ pub struct ParsedStickGroup {
     pub deadzone: f32,
     pub deadzone_release: f32,
     pub deadzone_bend: f32,
+    pub in_scale: f32,
+    pub out_scale: f32,
+    pub out_clamp: f32,
 }
 
 fn parse_button_bindings(cfg: &HashMap<String,ButtonMappingEnum>, exclude_dpad: bool, mut exclusions: HashSet<KeyCode>) -> anyhow::Result<ParsedButtonBindings> {
@@ -293,7 +310,7 @@ pub fn parse_axis_binding(cfg: &AxisMappingEnum, i: &SimulateGamepad, absolute: 
 
     let digitrigger_button = cfg.digitrigger_button.map(|v| match_key_code(&v) ).transpose()?;
 
-    let digitrigger_thresh = cfg.digitrigger_thresh.unwrap_or([TrThreshold::F64(0.8),TrThreshold::F64(0.75)]);
+    let digitrigger_thresh = cfg.digitrigger_thresh.unwrap_or([TrThreshold::F64(0.8), TrThreshold::F64(0.75)]);
     let digitrigger_thresh = digitrigger_thresh.map(|v| match v {
         _ if ic <= ib + 2 => 0,
         TrThreshold::F64(v) if v.is_finite() && v.is_sign_negative() => {

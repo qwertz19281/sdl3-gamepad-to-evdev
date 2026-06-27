@@ -2,7 +2,7 @@ use evdev::{EventType, InputEvent};
 
 use crate::Args;
 use crate::config::Config;
-use crate::parsed_config::{ParsedAxisBinding, ParsedConfig};
+use crate::parsed_config::{ParsedAxisBinding, ParsedConfig, ParsedStickGroup};
 use crate::simulated::SimulatedGamepad;
 
 pub struct CalibrationState<'a> {
@@ -14,11 +14,9 @@ pub struct AxisGroup<'a> {
     pub current: [i16;2],
     pub prev_out: Option<[i32;2]>,
     pub axes: [&'a ParsedAxisBinding;2],
+    pub pcfg: &'a ParsedStickGroup,
     pub dirty: bool,
     pub in_deadzone: bool,
-    pub deadzone: f32,
-    pub deadzone_release: f32,
-    pub deadzone_bend: f32,
     pub deadzone_bendscale: f32,
     pub out_scale: [f32;2],
     pub out_off: [f32;2],
@@ -34,13 +32,11 @@ impl<'a> CalibrationState<'a> {
             let axes = g.axes.map(|id| pcfg.axis_bindings.get(&id).unwrap() );
             let ag = AxisGroup {
                 current: [0;2],
+                prev_out: None,
                 axes,
+                pcfg: g,
                 dirty: false,
                 in_deadzone: false,
-                prev_out: None,
-                deadzone: g.deadzone,
-                deadzone_release: g.deadzone_release,
-                deadzone_bend: g.deadzone_bend,
                 deadzone_bendscale: (1. - g.deadzone_bend).recip(),
                 out_scale: axes.map(|s| s.out_range[1] as f32 - s.out_range[0] as f32),
                 out_off: axes.map(|s|s.out_range[0] as f32 ),
@@ -68,27 +64,26 @@ impl<'a> CalibrationState<'a> {
     pub fn submit(&mut self, queue: &mut SimulatedGamepad) {
         for g in &mut self.states {
             if g.dirty {
-                let [r,t] = to_polar(
+                let [mut r,t] = to_polar(
                     g.current[0] as f32 / 32767.,
                     g.current[1] as f32 / 32767.,
                 );
 
 
-                let mut r = r.clamp(0., 1.01);
                 if g.in_deadzone {
-                    if r < g.deadzone_release {
+                    if r < g.pcfg.deadzone_release {
                         r = 0.;
                         g.in_deadzone = false;
                     }
                 } else {
-                    if r < g.deadzone {
+                    if r < g.pcfg.deadzone {
                         r = 0.
                     } else {
                         g.in_deadzone = true;
                     }
                 }
                 let r = 1. - ((1. - r) * g.deadzone_bendscale);
-                let r = r.clamp(0., 1.01);
+                let r = r.clamp(0., g.pcfg.out_clamp);
 
 
                 let out = to_cartesian(r, t);
@@ -96,7 +91,7 @@ impl<'a> CalibrationState<'a> {
                 
                 for i in [0,1] {
                     let out = (out[i] + 1.) * 0.5;
-                    let out = out * g.out_scale[i];
+                    let out = out * g.out_scale[i] + g.out_off[i];
                     iout[i] = (out.round() as i32).clamp(g.axes[i].clamp_out[0], g.axes[i].clamp_out[1]);
                 }
 

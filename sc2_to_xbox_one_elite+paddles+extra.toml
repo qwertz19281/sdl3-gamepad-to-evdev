@@ -7,11 +7,11 @@ filter_product_id = [0x1304,0x1302,0x1303]
 wait_timeout_ms = 4
 
 [simulate_gamepad]
-name = "Microsoft X-Box 360 pad"
+name = "Microsoft X-Box One Elite pad"
 bus_type = "BUS_USB"
-vendor_id = 0x045E
-product_id = 0x028E
-version = 0x110
+vendor_id = 0x045e
+product_id = 0x02e3
+version = 0x1
 # enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
 enable_rumble = true
 
@@ -22,9 +22,6 @@ dpad_to_dpad = false
 dpad_to_hat = true
 rumble_multiplier_left = 1.0
 rumble_multiplier_right = 1.0
-
-[sdl_hints]
-SDL_JOYSTICK_LINUX_DEADZONES = "1"
 
 [button_map]
 south = "south"
@@ -41,16 +38,22 @@ right_stick = "thumbr"
 # steam button
 guide = "mode"
 # quick access button
-"misc1" = "base"
-"left_paddle1" = "trigger_happy1"
-"right_paddle1" = "trigger_happy2"
-"left_paddle2" = "trigger_happy3"
-"right_paddle2" = "trigger_happy4"
+misc1 = "base"
+left_paddle1 = 0x224 # BTN_GRIPL
+right_paddle1 = 0x225 # BTN_GRIPR
+left_paddle2 = 0x226 # BTN_GRIPL2
+right_paddle2 = 0x227 # BTN_GRIPR2
 
 [axis_map]
-left_trigger = { key = "z", out_range = [0,255] }
-right_trigger = { key = "rz", out_range = [0,255] }
-leftx = "x"
-rightx = "rx"
-lefty = "y"
-righty = "ry"
+left_trigger = { key = "z", out_range = [0,1023] }
+right_trigger = { key = "rz", out_range = [0,1023] }
+leftx = { key = "x", fuzz = 16, flat = 0 }
+rightx = { key = "rx", fuzz = 16, flat = 0 }
+lefty = { key = "y", fuzz = 16, flat = 0 }
+righty = { key = "ry", fuzz = 16, flat = 0 }
+
+[sticks]
+# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
+right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

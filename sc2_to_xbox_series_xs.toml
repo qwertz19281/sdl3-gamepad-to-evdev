@@ -1,0 +1,55 @@
+[input_gamepad]
+#filter_name = "Steam Controller"
+# 0x28DE (valve)
+filter_vendor_id = 0x28DE
+# steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+filter_product_id = [0x1304,0x1302,0x1303]
+wait_timeout_ms = 4
+
+[simulate_gamepad]
+name = "Microsoft Xbox Series S|X Controller"
+bus_type = "BUS_USB"
+vendor_id = 0x045e
+product_id = 0x0b12
+version = 0x1
+# enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
+enable_rumble = true
+
+[behavior]
+# whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
+dpad_to_dpad = false
+# whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
+dpad_to_hat = true
+rumble_multiplier_left = 1.0
+rumble_multiplier_right = 1.0
+
+[button_map]
+south = "south"
+east = "east"
+# need to be swapped for some reason, else it's swapped in many programs/games
+north = "west"
+west = "north"
+start = "start"
+back = "select"
+left_shoulder = "tl"
+right_shoulder = "tr"
+left_stick = "thumbl"
+right_stick = "thumbr"
+# steam button
+guide = "mode"
+# share button
+misc1 = 167 # KEY_RECORD
+
+[axis_map]
+left_trigger = { key = "z", out_range = [0,1023] }
+right_trigger = { key = "rz", out_range = [0,1023] }
+leftx = { key = "x", fuzz = 16, flat = 0 }
+rightx = { key = "rx", fuzz = 16, flat = 0 }
+lefty = { key = "y", fuzz = 16, flat = 0 }
+righty = { key = "ry", fuzz = 16, flat = 0 }
+
+[sticks]
+# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
+right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

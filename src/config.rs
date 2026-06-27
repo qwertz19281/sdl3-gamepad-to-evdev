@@ -115,15 +115,27 @@ pub struct Behavior {
 
 #[derive(Debug, Deserialize)]
 pub struct StickGroup {
+    /// which x and y axes should be grouped
     pub axis: [StringOrU16;2],
+    /// whether deadzone and scale parameters declared here should be applied. default: false
     #[serde(default)]
     pub process: bool,
     #[serde(default)]
+    /// deadzone in units 0.0 - 1.0
     pub deadzone: f32,
     #[serde(default)]
     pub deadzone_release: Option<f32>,
     #[serde(default)]
     pub deadzone_bend: Option<f32>,
+    /// scaling applied to stick radius before deadzone transforn. default: 1.0
+    #[serde(default)]
+    pub in_scale: Option<f32>,
+    /// scaling applied to stick radius after deadzone transforn. default: 1.0
+    #[serde(default)]
+    pub out_scale: Option<f32>,
+    /// clamp maximum relative output radius. default: 1.01
+    #[serde(default)]
+    pub out_clamp: Option<f32>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

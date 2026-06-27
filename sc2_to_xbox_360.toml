@@ -23,9 +23,6 @@ dpad_to_hat = true
 rumble_multiplier_left = 1.0
 rumble_multiplier_right = 1.0
 
-[sdl_hints]
-SDL_JOYSTICK_LINUX_DEADZONES = "1"
-
 [button_map]
 south = "south"
 east = "east"
@@ -44,7 +41,13 @@ guide = "mode"
 [axis_map]
 left_trigger = { key = "z", out_range = [0,255] }
 right_trigger = { key = "rz", out_range = [0,255] }
-leftx = "x"
-rightx = "rx"
-lefty = "y"
-righty = "ry"
+leftx = { key = "x", fuzz = 16, flat = 0 }
+rightx = { key = "rx", fuzz = 16, flat = 0 }
+lefty = { key = "y", fuzz = 16, flat = 0 }
+righty = { key = "ry", fuzz = 16, flat = 0 }
+
+[sticks]
+# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
+left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
+right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

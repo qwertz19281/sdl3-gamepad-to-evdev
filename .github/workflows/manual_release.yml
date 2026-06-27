@@ -7,6 +7,11 @@ on:
         description: 'existing release tag'
         required: true
         type: string
+      march:
+        description: 'march'
+        required: true
+        type: string
+        default: 'x86-64-v2'
 
 permissions:
   contents: write
@@ -19,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -34,18 +41,20 @@ jobs:
 
       - name: Build release binary
         run: |
+          export RUSTFLAGS="-C target-cpu=${{ inputs.march }}" CFLAGS="-march=${{ inputs.march }}" CXXFLAGS="-march=${{ inputs.march }}"
           cargo clean
-          cargo build --release
+          cargo build --release --features "build_sdl3_static"
 
       - name: Prepare release asset
         run: |
           BINARY_NAME="sdl3toevdev"
           VERSION="${{ inputs.release_tag }}"
-          ARCHIVE_NAME="${BINARY_NAME}-${VERSION}-linux-static-sdl3-amd64.zip"
+          MARCH="${{ inputs.march }}"
+          ARCHIVE_NAME="${BINARY_NAME}-${VERSION}-linux-static-sdl3-${MARCH}-amd64.zip"
           
           mv target/release/$BINARY_NAME $BINARY_NAME
           rm -f $ARCHIVE_NAME
-          zip -9 $ARCHIVE_NAME $BINARY_NAME
+          zip -9 $ARCHIVE_NAME $BINARY_NAME sc2_*.toml
 
       - name: Upload to GitHub Release via GH CLI
         env:
@@ -53,4 +62,4 @@ jobs:
         run: |
           VERSION="${{ inputs.release_tag }}"
           
-          gh release upload $VERSION *-linux-amd64.zip --clobber
+          gh release upload $VERSION *-amd64.zip --clobber
