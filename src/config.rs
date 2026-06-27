@@ -34,6 +34,10 @@ pub struct InputGamepad {
     #[serde(default)]
     pub filter_product_version: SingleOrArray<u16>,
     #[serde(default)]
+    pub filter_fw_version: SingleOrArray<u16>,
+    #[serde(default)]
+    pub filter_serial: SingleOrArray<String>,
+    #[serde(default)]
     pub filter_guid: SingleOrArray<String>,
     #[serde(default)]
     pub filter_path: SingleOrArray<String>,

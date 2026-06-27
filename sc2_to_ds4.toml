@@ -8,8 +8,11 @@ filter_product_id = [0x1304,0x1302,0x1303]
 # this controls the polling rate
 wait_timeout_ms = 4
 # additional parameters:
+# - filter_product_version: number
 # - filter_guid: filter to SDL GUID string (e.g. 03002854de2800000413000002006800)
 # - filter_path: filter to device path (e.g. /dev/hidraw1234)
+# - filter_serial: filter by serial number string (this will open the gamepad andm maybe close it right again)
+# - filter_fw_version: filter by fw version number (this will open the gamepad andm maybe close it right again)
 # - power_refresh_interval: every n milliseconds, the power info (battery percentage and state) are queried, set 0 to disable
 # - input_event_batch_size: set the amount of events to be pulled from SDL3 at once
 # - sdl_gamepad_mapping: override SDL3's joystick-to-gamepad mapping information,
