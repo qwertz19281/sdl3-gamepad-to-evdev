@@ -1,9 +1,10 @@
 [input_gamepad]
 #filter_name = "Steam Controller"
-# 0x28DE (valve)
-filter_vendor_id = 0x28DE
+# 0x28de (valve)
+filter_vendor_id = 0x28de
 # steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
 filter_product_id = [0x1304,0x1302,0x1303]
+# this controls the polling rate
 wait_timeout_ms = 4
 
 [simulate_gamepad]
@@ -49,7 +50,5 @@ lefty = { key = "y", fuzz = 16, flat = 0 }
 righty = { key = "ry", fuzz = 16, flat = 0 }
 
 [sticks]
-# left = { axis = ["leftx","lefty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
-# right = { axis = ["rightx","righty"], deadzone = 0.5, deadzone_release = 0.3, deadzone_bend = 0.0, process = true }
 left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
 right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

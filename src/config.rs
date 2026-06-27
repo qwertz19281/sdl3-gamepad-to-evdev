@@ -10,6 +10,7 @@ pub struct Config {
     #[serde(default)]
     pub simulate_gamepad_gyro: Option<SimulateGamepadGyro>,
     pub behavior: Behavior,
+    //#[serde(alias = "foo", alias = "bar")]
     pub button_map: HashMap<String,ButtonMappingEnum>,
     pub axis_map: HashMap<String,AxisMappingEnum>,
     #[serde(default)]
@@ -21,21 +22,22 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct InputGamepad {
     #[serde(default)]
-    pub filter_name: Option<String>,
+    pub filter_name: SingleOrArray<String>,
     #[serde(default)]
-    pub filter_vendor_id: VendorProductIds,
+    pub filter_vendor_id: SingleOrArray<u16>,
     #[serde(default)]
-    pub filter_product_id: VendorProductIds,
+    pub filter_product_id: SingleOrArray<u16>,
     #[serde(default)]
-    pub filter_product_version: VendorProductIds,
+    pub filter_product_version: SingleOrArray<u16>,
     #[serde(default)]
-    pub filter_guid: Option<String>,
+    pub filter_guid: SingleOrArray<String>,
     #[serde(default)]
-    pub filter_path: Option<String>,
+    pub filter_path: SingleOrArray<String>,
     #[serde(default)]
     pub wait_timeout_ms: Option<u32>,
     #[serde(default)]
     pub power_refresh_interval: Option<u32>,
+    /// currently defaults to 22
     #[serde(default)]
     pub input_event_batch_size: Option<usize>,
 }
@@ -54,6 +56,7 @@ pub struct SimulateGamepad {
     pub default_axis_flat: Option<i32>,
     #[serde(default)]
     pub default_axis_res: Option<i32>,
+    /// TODO not yet implemented
     #[serde(default)]
     pub keep_open_out_gamepad: Option<bool>,
     #[serde(default)]
@@ -127,10 +130,10 @@ pub struct StickGroup {
     pub deadzone_release: Option<f32>,
     #[serde(default)]
     pub deadzone_bend: Option<f32>,
-    /// scaling applied to stick radius before deadzone transforn. default: 1.0
+    /// scaling applied to stick radius before deadzone transform. default: 1.0
     #[serde(default)]
     pub in_scale: Option<f32>,
-    /// scaling applied to stick radius after deadzone transforn. default: 1.0
+    /// scaling applied to stick radius after deadzone transform. default: 1.0
     #[serde(default)]
     pub out_scale: Option<f32>,
     /// clamp maximum relative output radius. default: 1.01
@@ -249,15 +252,15 @@ pub enum TrThreshold {
 
 #[derive(Clone, Debug, Deserialize, Default)]
 #[serde(untagged)]
-pub enum VendorProductIds {
-    Single(u16),
-    Vec(Vec<u16>),
+pub enum SingleOrArray<T> {
+    Single(T),
+    Vec(Vec<T>),
     #[default]
     Empty,
 }
 
-impl VendorProductIds {
-    pub fn slice(&self) -> &[u16] {
+impl<T> SingleOrArray<T> {
+    pub fn slice(&self) -> &[T] {
         match self {
             Self::Single(v) => slice::from_ref(v),
             Self::Vec(v) => v,

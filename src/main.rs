@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use clap::Parser;
-use sdl3toevdev::config::Config;
-use sdl3toevdev::init;
+use sdl3_to_evdev::config::Config;
+use sdl3_to_evdev::init;
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -13,7 +13,7 @@ fn main() -> anyhow::Result<()> {
 
     let config = toml::from_slice::<Config>(&data).context("Failed to decode config file")?;
 
-    let app_args = sdl3toevdev::Args {
+    let app_args = sdl3_to_evdev::Args {
         dump_parse_config: args.verbose,
     };
 

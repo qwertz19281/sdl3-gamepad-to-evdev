@@ -60,24 +60,26 @@ impl LoopState<'_> {
                 );
 
                 let try_open = || -> anyhow::Result<Option<Gamepad>> {
-                    if let Some(v) = &in_cfg.filter_name {
+                    if !in_cfg.filter_name.slice().is_empty() {
                         let name = name?;
 
-                        if !name.contains(v) {
+                        if !in_cfg.filter_name.slice().iter().any(|v| name.contains(v) ) {
                             return Ok(None);
                         }
                     }
 
-                    if let Some(v) = &in_cfg.filter_guid {
-                        if !format!("{guid}").contains(v) {
+                    if !in_cfg.filter_guid.slice().is_empty() {
+                        let guid_str = format!("{guid}");
+
+                        if !in_cfg.filter_guid.slice().iter().any(|v| guid_str.contains(v) ) {
                             return Ok(None);
                         }
                     }
 
-                    if let Some(v) = &in_cfg.filter_path {
+                    if !in_cfg.filter_path.slice().is_empty() {
                         let path = path.context("Failed to query path")?;
 
-                        if !path.contains(v) {
+                        if !in_cfg.filter_path.slice().iter().any(|v| path.contains(v) ) {
                             return Ok(None);
                         }
                     }
