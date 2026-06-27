@@ -42,8 +42,9 @@ version = 0x8111
 [behavior]
 # whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
 dpad_to_dpad = false
-# whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
-dpad_to_hat = true
+# whether dpad buttons should be emulated as hat, only needed if sdl3 doesn't expose hat for the gamepad.
+# If enabled, other mappings to that hat will be ignored.
+dpad_to_hat = false
 # multiplier for rumble intensity
 rumble_multiplier_left = 1.0
 rumble_multiplier_right = 1.0
@@ -89,8 +90,12 @@ righty = { code = "ry", out_range = [0,255], from_range = [-32768,-32768,32767],
 #     from_range must be in increasing order, to_range may be increasing or decreasing
 #     the output value is clamped to the to_range min/max points
 
+[hats]
+# map hats by index
+0 = ["hat0x","hat0y"]
+
 [sticks]
-# key can be freely named
+# key can be freely named, as it will link the input axes to the stick definition
 # enabling deadzone via process = true will cause stick axes to be processed differently, the defined from_range/to_range will be ignored
 left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
 right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }

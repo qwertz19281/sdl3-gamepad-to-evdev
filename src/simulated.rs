@@ -59,6 +59,11 @@ impl SimulatedGamepad {
             builder = builder.with_absolute_axis(&v.setup)?;
         }
 
+        for v in parsed.hat_bindings.values() {
+            builder = builder.with_absolute_axis(&v.setup[0])?;
+            builder = builder.with_absolute_axis(&v.setup[1])?;
+        }
+
         for v in &parsed.additional_axes {
             builder = builder.with_absolute_axis(v)?;
         }

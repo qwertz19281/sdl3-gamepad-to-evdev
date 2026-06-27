@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use evdev::{AbsoluteAxisCode, EventSummary, EventType, FFEffectCode, FFEffectKind, InputEvent, UInputCode};
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
-use sdl3::joystick::{PowerInfo, PowerLevel};
+use sdl3::joystick::{HatState, PowerInfo, PowerLevel};
 use sdl3::sensor::SensorType;
 use sdl3::{EventPump, EventSubsystem, GamepadSubsystem, Sdl};
 use sdl3_sys::events::{SDL_EVENT_FIRST, SDL_EVENT_LAST, SDL_GETEVENT, SDL_PeepEvents};
@@ -150,7 +150,7 @@ impl LoopState<'_> {
                             gamepad.set_mapping(mapping).context("setting sdl gamepad mapping")?;
                         }
                         
-                        if self.app_args.dump_parse_config {
+                        if self.app_args.verbose {
                             match gamepad.mapping() {
                                 Some(mapping) => eprintln!("SDL gamepad mapping: {mapping}"),
                                 None => eprintln!("Failed to retrieve SDL gamepad mapping"),
@@ -249,6 +249,36 @@ impl LoopState<'_> {
                                     *mstate = down;
                                 }
                             }
+                        }
+                    }
+                }
+            }
+            Event::JoyHatMotion { which, hat_idx, state, .. } => {
+                eprintln!("HATTER: {state:?}");
+                if let Some((id, _, _)) = self.input.as_mut()
+                    && id.0 == which
+                    && let Some(out) = &mut self.output
+                {
+                    let mapping = self.parsed_config.hat_lut
+                        .get(hat_idx as usize)
+                        .and_then(|v| v.as_ref() );
+
+                    if let Some(m) = mapping {
+                        let axes = match state {
+                            HatState::Centered => [0,0],
+                            HatState::Up => [0,-1],
+                            HatState::Right => [1,0],
+                            HatState::Down => [0,1],
+                            HatState::Left => [-1,0],
+                            HatState::RightUp => [1,-1],
+                            HatState::RightDown => [1,1],
+                            HatState::LeftUp => [-1,-1],
+                            HatState::LeftDown => [-1,1],
+                        };
+
+                        for i in [0,1] {
+                            let evdev_event = InputEvent::new(EventType::ABSOLUTE.0, m[i].0, axes[i]);
+                            out.queue.push(evdev_event);
                         }
                     }
                 }

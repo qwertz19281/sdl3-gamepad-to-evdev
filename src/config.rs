@@ -11,12 +11,16 @@ pub struct Config {
     pub simulate_gamepad_gyro: Option<SimulateGamepadGyro>,
     pub behavior: Behavior,
     //#[serde(alias = "foo", alias = "bar")]
+    #[serde(default, alias = "buttons")]
     pub button_map: HashMap<String,ButtonMappingEnum>,
+    #[serde(default, alias = "axes")]
     pub axis_map: HashMap<String,AxisMappingEnum>,
     #[serde(default)]
     pub sdl_hints: HashMap<String,String>,
     #[serde(default)]
     pub sticks: HashMap<String,StickGroup>,
+    #[serde(default, alias = "hat_map")]
+    pub hats: HashMap<u8,[StringOrU16;2]>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,6 +37,8 @@ pub struct InputGamepad {
     pub filter_guid: SingleOrArray<String>,
     #[serde(default)]
     pub filter_path: SingleOrArray<String>,
+    #[serde(default)]
+    pub filter_serial: SingleOrArray<String>,
     #[serde(default)]
     pub wait_timeout_ms: Option<u32>,
     #[serde(default)]
@@ -105,7 +111,7 @@ pub struct SimulateGamepadGyro {
 pub struct Behavior {
     #[serde(default)]
     pub dpad_to_dpad: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub dpad_to_hat: bool,
     /// defaults to hat0
     #[serde(default)]
@@ -273,6 +279,7 @@ impl<T> SingleOrArray<T> {
     }
 }
 
+#[allow(unused)]
 fn default_true() -> bool {
     true
 }

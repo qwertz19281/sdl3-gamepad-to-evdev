@@ -14,7 +14,8 @@ fn main() -> anyhow::Result<()> {
     let config = toml::from_slice::<Config>(&data).context("decoding config file")?;
 
     let app_args = sdl3_to_evdev::Args {
-        dump_parse_config: args.verbose,
+        dump_parse_config: args.dump_parsed_config,
+        verbose: args.verbose,
     };
 
     init(&config, app_args)?;
@@ -22,13 +23,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// sd3toevdev
+/// sd3-to-evdev
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct Args {
     /// verbose
     #[arg(short='v')]
     pub verbose: bool,
+    /// dump parsed config
+    #[arg(long="dump-parsed-config")]
+    pub dump_parsed_config: bool,
     /// Path to config toml file
     #[arg()]
     pub config: PathBuf,

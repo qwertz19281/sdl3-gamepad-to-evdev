@@ -14,17 +14,36 @@ use crate::simulated_gyro::ParsedGyroConfig;
 pub struct ParsedConfig {
     pub button_bindings: ParsedButtonBindings,
     pub axis_bindings: ParsedAxisBindings,
+    pub hat_bindings: ParsedHatBindings,
     pub evdev_bus_type: BusType,
     pub additional_buttons: Vec<KeyCode>,
     pub additional_axes: Vec<UinputAbsSetup>,
     pub button_lut: Vec<u16>,
     pub axis_lut: Vec<Option<Box<ParsedAxisBinding>>>,
+    pub hat_lut: Vec<Option<[AbsoluteAxisCode;2]>>,
     pub power_refresh_interval: u64,
     pub rumble_mul: [u64;2],
     pub parsed_gyro: Option<ParsedGyroConfig>,
     pub dpad_to_hat_axis: Option<[AbsoluteAxisCode;2]>,
     pub stickgroup: Vec<ParsedStickGroup>,
 }
+
+// impl std::fmt::Debug for ParsedConfig {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("ParsedConfig")
+//             .field("button_bindings", &self.button_bindings)
+//             .field("axis_bindings", &self.axis_bindings)
+//             .field("hat_bindings", &self.hat_bindings)
+//             .field("evdev_bus_type", &self.evdev_bus_type)
+//             .field("additional_buttons", &self.additional_buttons)
+//             .field("additional_axes", &self.additional_axes)
+//             .field("power_refresh_interval", &self.power_refresh_interval)
+//             .field("rumble_mul", &self.rumble_mul)
+//             .field("parsed_gyro", &self.parsed_gyro)
+//             .field("dpad_to_hat_axis", &self.dpad_to_hat_axis)
+//             .field("stickgroup", &self.stickgroup).finish()
+//     }
+// }
 
 impl ParsedConfig {
     pub fn parse(cfg: &Config, _app_args: &Args) -> anyhow::Result<Self> {
@@ -33,7 +52,6 @@ impl ParsedConfig {
 
         let mut axis_exclusions = HashSet::new();
         let mut additional_axes = Vec::new();
-
 
         let mut button_exclusions = HashSet::new();
         let mut additional_buttons = Vec::new();
@@ -64,7 +82,8 @@ impl ParsedConfig {
             ]);
         }
 
-        let mut axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, axis_exclusions)?;
+        let mut axis_bindings = parse_axis_bindings(&cfg.axis_map, &cfg.simulate_gamepad, &mut axis_exclusions).context("parsing axis mappings")?;
+        let hat_bindings = parse_hat_bindings(&cfg.hats, &mut axis_exclusions).context("parsing hat mappings")?;
 
         if cfg.behavior.simulate_digital_trigger {
             let mut add = |code: KeyCode| {
@@ -126,7 +145,7 @@ impl ParsedConfig {
             stickgroup.push(pag);
         }
 
-        let max_button_id = button_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadButton::COUNT.0);
+        let max_button_id = button_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadButton::COUNT.0) + 1;
         let mut button_lut = vec![u16::MAX; max_button_id as _];
 
         for (k,v) in &button_bindings {
@@ -135,13 +154,20 @@ impl ParsedConfig {
             }
         }
 
-        let max_axis_id = axis_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadAxis::COUNT.0);
+        let max_axis_id = axis_bindings.keys().map(|v| v.to_ll().0 ).max().unwrap_or(0).max(SDL_GamepadAxis::COUNT.0) + 1;
         let mut axis_lut = none_vec(max_axis_id as _);
 
         for (k,v) in &axis_bindings {
             if k.to_ll().0 >= 0 {
                 axis_lut[k.to_ll().0 as usize] = Some(Box::new(v.clone()));
             }
+        }
+
+        let max_hat_id = hat_bindings.keys().copied().max().unwrap_or(0) + 1;
+        let mut hat_lut = none_vec(max_hat_id as _);
+
+        for (k,v) in &hat_bindings {
+            hat_lut[*k as usize] = Some(v.code);
         }
 
         let power_refresh_interval= cfg.input_gamepad.power_refresh_interval.unwrap_or(5000) as u64 * 1_000_000;
@@ -156,11 +182,13 @@ impl ParsedConfig {
         Ok(ParsedConfig {
             button_bindings,
             axis_bindings,
+            hat_bindings,
             evdev_bus_type,
             additional_buttons,
             additional_axes,
             button_lut,
             axis_lut,
+            hat_lut,
             power_refresh_interval,
             rumble_mul,
             parsed_gyro,
@@ -172,6 +200,7 @@ impl ParsedConfig {
 
 pub type ParsedButtonBindings = HashMap<Button,ParsedButtonBinding>;
 pub type ParsedAxisBindings = HashMap<Axis,ParsedAxisBinding>;
+pub type ParsedHatBindings = HashMap<u8,ParsedHatBinding>;
 
 #[derive(Debug)]
 pub struct ParsedButtonBinding {
@@ -192,6 +221,12 @@ pub struct ParsedAxisBinding {
     pub digitrigger_thresh: [i32;2],
     /// (idx,dim)
     pub axisgroup: Option<(usize,bool)>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ParsedHatBinding {
+    pub code: [AbsoluteAxisCode;2],
+    pub setup: [UinputAbsSetup;2],
 }
 
 #[derive(Clone, Debug)]
@@ -225,7 +260,7 @@ fn parse_button_bindings(cfg: &HashMap<String,ButtonMappingEnum>, exclude_dpad: 
     Ok(out)
 }
 
-fn parse_axis_bindings(cfg: &HashMap<String,AxisMappingEnum>, sg: &SimulateGamepad, mut exclusions: HashSet<AbsoluteAxisCode>) -> anyhow::Result<ParsedAxisBindings> {
+fn parse_axis_bindings(cfg: &HashMap<String,AxisMappingEnum>, sg: &SimulateGamepad, exclusions: &mut HashSet<AbsoluteAxisCode>) -> anyhow::Result<ParsedAxisBindings> {
     let mut out = HashMap::new();
 
     for (k,v) in cfg {
@@ -238,6 +273,33 @@ fn parse_axis_bindings(cfg: &HashMap<String,AxisMappingEnum>, sg: &SimulateGamep
         }
 
         out.insert(key, binding);
+    }
+
+    Ok(out)
+}
+
+fn parse_hat_bindings(cfg: &HashMap<u8,[StringOrU16;2]>, exclusions: &mut HashSet<AbsoluteAxisCode>) -> anyhow::Result<ParsedHatBindings> {
+    let mut out = HashMap::new();
+
+    for (k,[x,y]) in cfg {
+        let x = match_axis_code(x)?;
+        let y = match_axis_code(y)?;
+
+        if !exclusions.insert(x) {
+            bail!("{k} adds duplicate output key {:?}, which is (currently) not supported", x);
+        }
+        if !exclusions.insert(y) {
+            bail!("{k} adds duplicate output key {:?}, which is (currently) not supported", y);
+        }
+
+        let info = AbsInfo::new(0, -1, 1, 0, 0, 0);
+
+        let setup = [
+            UinputAbsSetup::new(x, info),
+            UinputAbsSetup::new(y, info),
+        ];
+
+        out.insert(*k, ParsedHatBinding { code: [x,y], setup });
     }
 
     Ok(out)

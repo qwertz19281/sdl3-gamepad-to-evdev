@@ -20,7 +20,7 @@ pub fn init(cfg: &Config, args: Args) -> anyhow::Result<()> {
         eprintln!("\nConfig: {cfg:#?}");
     }
 
-    let parsed_config = ParsedConfig::parse(cfg, &args).context("parsing context")?;
+    let parsed_config = ParsedConfig::parse(cfg, &args).context("parsing config")?;
 
     if args.dump_parse_config {
         eprintln!("\nParsed Config: {parsed_config:#?}\n");
@@ -31,6 +31,7 @@ pub fn init(cfg: &Config, args: Args) -> anyhow::Result<()> {
 
 pub struct Args {
     pub dump_parse_config: bool,
+    pub verbose: bool,
 }
 
 struct FmtOpt<T>(T);

@@ -26,13 +26,6 @@ product_id = 0x5c4
 version = 0x8111
 
 [behavior]
-# whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
-dpad_to_dpad = false
-# whether dpad should be emulated as hat0 (recommended). If enabled, other mappings to hat0 will be ignored.
-dpad_to_hat = true
-# multiplier for rumble intensity
-rumble_multiplier_left = 1.0
-rumble_multiplier_right = 1.0
 # A DS4 evdev usually also provices TL2/TR2 button derived from analog trigger press
 # axis.digitrigger_thresh defined the press and release points for activation
 simulate_digital_trigger = true
@@ -57,7 +50,6 @@ right_paddle1 = 0x225 # BTN_GRIPR
 left_paddle2 = 0x226 # BTN_GRIPL2
 right_paddle2 = 0x227 # BTN_GRIPR2
 
-
 [axis_map]
 left_trigger = { code = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
 right_trigger = { code = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
@@ -65,6 +57,10 @@ leftx = { code = "x", out_range = [0,255], from_range = [-32768,-32768,32767], t
 rightx = { code = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 lefty = { code = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 righty = { code = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
+
+[hats]
+# map hats by index
+0 = ["hat0x","hat0y"]
 
 [sticks]
 left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }

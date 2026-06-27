@@ -16,10 +16,16 @@ serde = { version = "1", features = ["derive"] }
 clap = { version = "4.5", features = ["derive"] }
 nix = { version = "0.29", features = [] }
 
+[features]
+#default = ["build_sdl3_static"]
+build_sdl3 = ["sdl3/build-from-source","sdl3-sys/build-from-source"]
+build_sdl3_static = ["sdl3/build-from-source-static","sdl3-sys/build-from-source-static"]
+
+[[test]]
+name = "parse_configs"
+path = "tests/parse_configs.rs"
+harness = false
+
 [profile.release]
 codegen-units = 1
 lto = true
-
-[features]
-build_sdl3 = ["sdl3/build-from-source","sdl3-sys/build-from-source"]
-build_sdl3_static = ["sdl3/build-from-source-static","sdl3-sys/build-from-source-static"]
