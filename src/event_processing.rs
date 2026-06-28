@@ -366,6 +366,8 @@ impl LoopState<'_> {
 
         match try_open() {
             Ok(Some(mut gamepad)) => {
+                check_gamepad_mapping_presence(&gamepad, self.parsed_config);
+
                 SimulatedGamepad::close(&mut self.output)?;
                 SimulatedGamepadGyro::close(&mut self.motion_output)?;
 
@@ -453,5 +455,24 @@ impl LoopState<'_> {
         }
 
         Ok(out_vec)
+    }
+}
+
+pub fn check_gamepad_mapping_presence(gp: &Gamepad, pcfg: &ParsedConfig) {
+    let missing_buttons = pcfg.button_bindings.keys()
+        .copied()
+        .filter(|&v| !gp.has_button(v) )
+        .collect::<Vec<_>>();
+
+    let missing_axes = pcfg.axis_bindings.keys()
+        .copied()
+        .filter(|&v| !gp.has_axis(v) )
+        .collect::<Vec<_>>();
+
+    if !missing_buttons.is_empty() {
+        eprintln!("Connected gamepad lacks configured buttons: {missing_buttons:?}");
+    }
+    if !missing_axes.is_empty() {
+        eprintln!("Connected gamepad lacks configured axes: {missing_axes:?}");
     }
 }
