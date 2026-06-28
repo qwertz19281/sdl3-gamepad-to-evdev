@@ -60,6 +60,9 @@ simulate_digital_trigger = true
 # key matches the sdl input button, value is the evdev keycode,
 # either: a string identifier, or a decimal or hexadecimal number, or a set of parameters with the key parameter
 # e.g.: foo = "bar", foo = 0x1234, foo = { code = "bar"/0x1234, dpad = false }
+# evdev keycodes (KEY_ and BTN_ codes supported here):
+# https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+# https://docs.rs/evdev/latest/evdev/struct.KeyCode.html
 south = "south"
 east = "east"
 north = "north"

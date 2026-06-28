@@ -39,14 +39,17 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig, app_args: &Args) -> any
 
     eprintln!("SDL initialized");
 
-    let wait_timeout_ms = cfg.input_gamepad.wait_timeout_ms.unwrap_or(10);
+    let wait_timeout_ms = cfg.input_gamepad.wait_timeout_ms.unwrap_or(5);
+    let wait_timeout_ms_idle = cfg.input_gamepad.wait_timeout_ms_idle.unwrap_or(5000);
     let max_batch_size = cfg.input_gamepad.input_event_batch_size.unwrap_or(22);
 
     // let mut total_counter = 0u64;
     // let mut batch_counters = vec![0u64; 65];
 
     loop {
-        let events = ls.pull_event_batch(max_batch_size, wait_timeout_ms); // 14 or 22
+        let wait_timeout_ms = if ls.input.is_some() {wait_timeout_ms} else {wait_timeout_ms_idle};
+
+        let events = ls.pull_event_batch(max_batch_size, wait_timeout_ms);
 
         // total_counter += events.len() as u64;
         // batch_counters[events.len()] += 1;
