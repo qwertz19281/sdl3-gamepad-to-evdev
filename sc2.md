@@ -12,7 +12,7 @@ Raw index | SDL3 gamepad button code | Steam Controller button
 `5` | `Guide` | Steam (middle button)
 `6` | `Start` | Menu / Start
 `7` | `Left Stick` | L3 (press left analog stick)
-`8` | `Right Stick` | R3 (press left analog stick)
+`8` | `Right Stick` | R3 (press right analog stick)
 `9` | `Left Shoulder` | L1
 `10` | `Right Shoulder` | R2
 `11` | `Misc1` | Quick Access Menu (between touchpads)

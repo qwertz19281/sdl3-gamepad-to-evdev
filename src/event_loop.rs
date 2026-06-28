@@ -49,7 +49,7 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig, app_args: &Args) -> any
     loop {
         let wait_timeout_ms = if ls.input.is_some() {wait_timeout_ms} else {wait_timeout_ms_idle};
 
-        let events = ls.pull_event_batch(max_batch_size, wait_timeout_ms);
+        let events = ls.pull_event_batch(max_batch_size, wait_timeout_ms)?;
 
         // total_counter += events.len() as u64;
         // batch_counters[events.len()] += 1;
@@ -61,11 +61,11 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig, app_args: &Args) -> any
         }
 
         if let Some(out) = &mut ls.output {
-            if cfg.simulate_gamepad.emit_timestamp && !out.queue.is_empty() {
-                out.queue.push(InputEvent::new(EventType::MISC.0, MiscCode::MSC_TIMESTAMP.0, (ls.tick / 1000) as i32));
-            }
             if let Some((_,_,calib)) = &mut ls.input {
                 calib.submit(out);
+            }
+            if !out.queue.is_empty() && cfg.simulate_gamepad.emit_timestamp {
+                out.queue.push(InputEvent::new(EventType::MISC.0, MiscCode::MSC_TIMESTAMP.0, (ls.tick / 1000) as i32));
             }
             out.submit()?;
         }

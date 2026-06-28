@@ -28,9 +28,9 @@ cargo install --locked --git https://github.com/qwertz19281/sdl3-gamepad-to-evde
 
 | feature flag | description |
 | --- | --- |
-| none | A recent SDL3 version like 3.4.10 should be provided. |
-`build_sdl3` | Build SDL3 from source for SDL3-to-evdev.
-`build_sdl3_static` | Build SDL3 from source and statically link into sdl3-to-evdev, for self-contained binary.
+| none | Headers of a recent SDL3 version like 3.4.10 should be provided. |
+| `build_sdl3` | Build SDL3 from source for SDL3-to-evdev, link dynamically. |
+| `build_sdl3_static` | Build SDL3 from source and statically link into sdl3-to-evdev, for a self-contained binary. |
 
 # Run
 
@@ -66,4 +66,4 @@ The code is human-written and doesn't contain any significant AI-generated secti
 
 AI/LLM were used in research, results are plausibility and quality checked.
 
-sdl3-to-evdev is tested with a real steam controller, DS4, RetroArch, dolphin, firefox.
+sdl3-to-evdev is tested with a real Steam Controller, DS4, RetroArch, Dolphin, Firefox.

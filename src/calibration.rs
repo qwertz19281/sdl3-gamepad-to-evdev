@@ -37,6 +37,7 @@ impl<'a> CalibrationState<'a> {
                 pcfg: g,
                 dirty: false,
                 in_deadzone: false,
+                // g.deadzone_bend is checked to be non-zero in parsed_config
                 deadzone_bendscale: (1. - g.deadzone_bend).recip(),
                 out_scale: axes.map(|s| s.out_range[1] as f32 - s.out_range[0] as f32),
                 out_off: axes.map(|s|s.out_range[0] as f32 ),

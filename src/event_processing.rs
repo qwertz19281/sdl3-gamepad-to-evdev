@@ -418,10 +418,10 @@ impl LoopState<'_> {
         Ok(())
     }
 
-    pub fn pull_event_batch(&mut self, max: usize, wait_ms: u32) -> Vec<Event> {
+    pub fn pull_event_batch(&mut self, max: usize, wait_ms: u32) -> anyhow::Result<Vec<Event>> {
         let first = self.event_pump.wait_event_timeout_ms(wait_ms);
 
-        let Some(first) = first else {return vec![]};
+        let Some(first) = first else {return Ok(vec![])};
 
         let mut staging_vec = Vec::with_capacity(max-1);
         let mut out_vec = Vec::with_capacity(max);
@@ -440,7 +440,7 @@ impl LoopState<'_> {
             };
 
             if result < 0 {
-                panic!("SDL_PeepEvents error {result}");
+                bail!("SDL_PeepEvents error {result}");
             }
 
             unsafe {
@@ -452,6 +452,6 @@ impl LoopState<'_> {
             }
         }
 
-        out_vec
+        Ok(out_vec)
     }
 }
