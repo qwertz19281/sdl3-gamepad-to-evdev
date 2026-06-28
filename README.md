@@ -34,13 +34,13 @@ cargo install --locked --git https://github.com/qwertz19281/sdl3-gamepad-to-evde
 
 # Run
 
-`sdl3-to-evdev path-to-config.toml`
+`sdl3_to_evdev path-to-config.toml`
 
 It will automatically detect when the configured gamepad connects/disconnects and then open or close the virtual evdev device.
 
 sdl3-to-evdev exits on recieving Ctrl+C / SIGINT.
 
-See [sc2_to_ds4.toml](sc2_to_ds4.toml) for a configuration example.
+The config file defines mappings, filter for input gamepad, id for output evdev, and more. See [sc2_to_ds4.toml](sc2_to_ds4.toml) for a configuration example.
 
 "+extra" profiles map additional buttons the to-emulate gamepad doesn't have, and as excess buttons may mess up evdev button order, so it may only work for apps/games that support button remapping.
 

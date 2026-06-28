@@ -412,6 +412,8 @@ impl LoopState<'_> {
 
                 self.input = Some((id, gamepad, calib));
                 self.output = Some(out);
+
+                self.last_power_check = self.tick;
             },
             Ok(None) => eprintln!("Ignore gamepad: {formatted_name} {formatted_serial}"),
             Err(e) => eprintln!("Failed to open gamepad: {formatted_name} {formatted_serial}: {e:#}"),

@@ -15,6 +15,7 @@ wait_timeout_ms = 4
 # - filter_fw_version: filter by fw version number (this will open the gamepad andm maybe close it right again)
 # - power_refresh_interval: every n milliseconds, the power info (battery percentage and state) are queried, set 0 to disable
 # - input_event_batch_size: set the amount of events to be pulled from SDL3 at once
+# - wait_timeout_ms_idle: override poll wait timeout rate when input gamepad is not connected
 # - sdl_gamepad_mapping: override SDL3's joystick-to-gamepad mapping information,
 #     these map the raw joystick-api button/axes indices to the sdl button/axis code we then map to evdev codes.
 
