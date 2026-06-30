@@ -1,20 +1,22 @@
 [input_gamepad]
-# the filter_ parameters can take either single value or array
+# The filter_ parameters can take either single value or array
 #filter_name = "Steam Controller"
 # 0x28de (valve)
 filter_vendor_id = 0x28de
-# steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+# Steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
 filter_product_id = [0x1304,0x1302,0x1303]
-# this controls the polling rate
+# This controls the "polling rate" in milliseconds.
+# sdl3-to-evdev uses SDL_WaitEventTimeout as sleep which waits until timeout or wakes up earlier if events arrive.
+# So it doesn't really matter if this timeout would be set higher, unless you enable rumble, then this value needs to be low enough so the rumble input is polled often enough, else games/apps may even stutter or freeze.
 wait_timeout_ms = 4
-# additional parameters:
+# Additional parameters:
 # - filter_product_version: number
 # - filter_guid: filter to SDL GUID string (e.g. 03002854de2800000413000002006800)
 # - filter_path: filter to device path (e.g. /dev/hidraw1234)
-# - filter_serial: filter by serial number string (this will open the gamepad andm maybe close it right again)
-# - filter_fw_version: filter by fw version number (this will open the gamepad andm maybe close it right again)
+# - filter_serial: filter by serial number string (this will open the gamepad and maybe close it right again)
+# - filter_fw_version: filter by fw version number (this will open the gamepad and maybe close it right again)
 # - power_refresh_interval: every n milliseconds, the power info (battery percentage and state) are queried, set 0 to disable
-# - input_event_batch_size: set the amount of events to be pulled from SDL3 at once
+# - input_event_batch_size: set the amount of events to be pulled and processed from SDL3 at once (this can affect latency)
 # - wait_timeout_ms_idle: override poll wait timeout rate when input gamepad is not connected
 # - sdl_gamepad_mapping: override SDL3's joystick-to-gamepad mapping information,
 #     these map the raw joystick-api button/axes indices to the sdl button/axis code we then map to evdev codes.
@@ -25,18 +27,19 @@ bus_type = "BUS_USB"
 vendor_id = 0x54c
 product_id = 0x5c4
 version = 0x8111
-# enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
+# Enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
 enable_rumble = true
 
+# You may need to set a udev rule like this to make the gyro appear to the user:
 # SUBSYSTEM=="input", ATTRS{name}=="Sony Computer Entertainment Wireless Controller Motion Sensors", MODE="0660", TAG+="uaccess"
 [simulate_gamepad_gyro]
-# disabling gyro if not needed may reduce gamepad battery usage
+# Disabling gyro and accelerometer if not needed may reduce gamepad battery usage
 enable = true
 name = "Sony Computer Entertainment Wireless Controller Motion Sensors"
 vendor_id = 0x54c
 product_id = 0x5c4
 version = 0x8111
-# additional parameters:
+# Additional parameters:
 # - accel_mul: accelerometer output axes multiplier, e.g. [1.0,-1.0,-1.0] [float,float,float]
 # - accel_mul_raw: raw multiplier, overrides accel_mul [float,float,float]
 # - gyro_mul: accelerometer output axes multiplier [float,float,float]
@@ -44,21 +47,21 @@ version = 0x8111
 # - accel/gyro_fuzz/flat/res: override evdev axis parameters
 
 [behavior]
-# whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
+# Whether dpad should be emulated as dpad buttons. If disabled, button mappings with dpad = true flag will be disabled.
 dpad_to_dpad = false
-# whether dpad buttons should be emulated as hat, only needed if sdl3 doesn't expose hat for the gamepad.
+# Whether dpad buttons should be emulated as hat, only needed if sdl3 doesn't expose hat for the gamepad.
 # If enabled, other mappings to that hat will be ignored.
 dpad_to_hat = false
-# multiplier for rumble intensity
+# Multiplier for rumble intensity
 rumble_multiplier_left = 1.0
 rumble_multiplier_right = 1.0
-# A DS4 evdev usually also provices TL2/TR2 button derived from analog trigger press
+# A DS4 evdev usually also provides TL2/TR2 button derived from analog trigger press
 simulate_digital_trigger = true
-# additional parameters:
+# Additional parameters:
 # - dpad_to_hat_axis: output axes for dpad_to_hat emulation. default ["hat0x","hat0y"]
 
-[button_map]
-# key matches the sdl input button, value is the evdev keycode,
+[buttons]
+# Key matches the sdl input button, value is the evdev keycode,
 # either: a string identifier, or a decimal or hexadecimal number, or a set of parameters with the key parameter
 # e.g.: foo = "bar", foo = 0x1234, foo = { code = "bar"/0x1234, dpad = false }
 # evdev keycodes (KEY_ and BTN_ codes supported here):
@@ -74,20 +77,20 @@ left_shoulder = "tl"
 right_shoulder = "tr"
 left_stick = "thumbl"
 right_stick = "thumbr"
-# steam button
+# Steam button
 guide = "mode"
-# additional parameters:
+# Additional parameters:
 # - dpad: mark button mapping as dpad button mapping, then it will only be active if dpad_to_dpad is enabled. default: false
 
-[axis_map]
-# key is sdl3 axis code, value is evdev absolute axis code (string or number), or set of parameters
+[axes]
+# Key is sdl3 axis code, value is evdev absolute axis code (string or number), or set of parameters
 left_trigger = { code = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
 right_trigger = { code = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
 leftx = { code = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
 rightx = { code = "rx", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
 lefty = { code = "y", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
 righty = { code = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255], initial = 126 }
-# additional parameters:
+# Additional parameters:
 # - out_range: evdev output data range,
 # - digitrigger_button: what button should be emitted when pressing down to specified threshold
 # - digitrigger_thresh: press and release points
@@ -98,15 +101,15 @@ righty = { code = "ry", out_range = [0,255], from_range = [-32768,-32768,32767],
 #     the output value is clamped to the to_range min/max points
 
 [hats]
-# map hats by index
+# Map hats by index
 0 = ["hat0x","hat0y"]
 
 [sticks]
-# key can be freely named, as it will link the input axes to the stick definition
-# enabling deadzone via process = true will cause stick axes to be processed differently, the defined from_range/to_range will be ignored
+# Key can be freely named, as it will link the input axes to the stick definition
+# Enabling deadzone via process = true will cause stick axes to be processed differently, the axis's defined from_range/to_range will then be ignored
 left = { axis = ["leftx","lefty"], deadzone = 0.15, process = true }
 right = { axis = ["rightx","righty"], deadzone = 0.15, process = true }
-# additional parameters:
+# Additional parameters:
 # - deadzone_release: a release point slightly smaller may be declared for debouncing. must be <= deadzone
 # - deadzone_bend: the lower radius bound to be stretched to 0. defaults to deadzone_release or deadzone. must be <= deadzone_release
 # - in_scale: scaling applied to stick radius before deadzone transform. default: 1.0

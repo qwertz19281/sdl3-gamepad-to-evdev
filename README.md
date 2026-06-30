@@ -18,7 +18,7 @@ Not (yet) implemented:
 
 # Install
 
-## Release build on GitHub Releases, with SDL3 statically linked into a single binary
+## Download release builds on [GitHub Releases](https://github.com/qwertz19281/sdl3-gamepad-to-evdev/releases), with SDL3 statically linked into a single binary
 
 ## Build & install with cargo
 
@@ -34,15 +34,17 @@ cargo install --locked --git https://github.com/qwertz19281/sdl3-gamepad-to-evde
 
 # Run
 
-`sdl3_to_evdev path-to-config.toml`
+`sdl3_to_evdev path-to-preset.toml`
 
 It will automatically detect when the configured gamepad connects/disconnects and then open or close the virtual evdev device.
 
-sdl3-to-evdev exits on recieving Ctrl+C / SIGINT.
+sdl3-to-evdev exits on receiving Ctrl+C / SIGINT.
 
-The config file defines mappings, filter for input gamepad, id for output evdev, and more. See [sc2_to_ds4.toml](sc2_to_ds4.toml) for a configuration example.
+The presets defines mappings, filter for input gamepad, id for output evdev, and more. See [sc2_to_ds4.toml](sc2_to_ds4.toml) for an example.
 
-"+extra" profiles map additional buttons the to-emulate gamepad doesn't have, and as excess buttons may mess up evdev button order, so it may only work for apps/games that support button remapping.
+Note that the button and axis mapping is kinda fragile with evdev. You may have to adjust the mappings in the presets if the appear swapped in a game, and you can't or don't want to change mappings in-game. Especially the "+extra" presets which map more buttons than the to-emulate gamepads have are affected.
+
+For the new Steam Controller, you may need to add udev rules so it can be fully accessed by the user, see [sc2.md](sc2.md).
 
 ## License
 

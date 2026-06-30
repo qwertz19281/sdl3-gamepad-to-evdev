@@ -18,7 +18,7 @@ enable_rumble = true
 
 [behavior]
 
-[button_map]
+[buttons]
 south = "south"
 east = "east"
 # need to be swapped for some reason, else it's swapped in many programs/games
@@ -39,7 +39,7 @@ right_paddle1 = 0x225 # BTN_GRIPR
 left_paddle2 = 0x226 # BTN_GRIPL2
 right_paddle2 = 0x227 # BTN_GRIPR2
 
-[axis_map]
+[axes]
 left_trigger = { code = "z", out_range = [0,255] }
 right_trigger = { code = "rz", out_range = [0,255] }
 leftx = { code = "x", fuzz = 16, flat = 0 }

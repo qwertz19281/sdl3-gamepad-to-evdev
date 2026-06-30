@@ -41,7 +41,7 @@ pub fn entry(cfg: &Config, parsed_config: &ParsedConfig, app_args: &Args) -> any
 
     let wait_timeout_ms = cfg.input_gamepad.wait_timeout_ms.unwrap_or(5);
     let wait_timeout_ms_idle = cfg.input_gamepad.wait_timeout_ms_idle.unwrap_or(5000);
-    let max_batch_size = cfg.input_gamepad.input_event_batch_size.unwrap_or(22);
+    let max_batch_size = cfg.input_gamepad.input_event_batch_size.unwrap_or(32);
 
     // let mut total_counter = 0u64;
     // let mut batch_counters = vec![0u64; 65];

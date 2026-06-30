@@ -2,9 +2,9 @@
 #filter_name = "Steam Controller"
 # 0x28de (valve)
 filter_vendor_id = 0x28de
-# steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
+# Steam controller 2026: 0x1304 (puck), 0x1302 (usb), 0x1303 (bt)
 filter_product_id = [0x1304,0x1302,0x1303]
-# this controls the polling rate
+# This controls the "polling rate"
 wait_timeout_ms = 4
 
 [simulate_gamepad]
@@ -13,12 +13,12 @@ bus_type = "BUS_USB"
 vendor_id = 0x54c
 product_id = 0x5c4
 version = 0x8111
-# enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
+# Enabling rumble requires setting wait_timeout_ms to a lower value like e.g. 4ms
 enable_rumble = true
 
 # SUBSYSTEM=="input", ATTRS{name}=="Sony Computer Entertainment Wireless Controller Motion Sensors", MODE="0660", TAG+="uaccess"
 [simulate_gamepad_gyro]
-# disabling gyro if not needed may reduce gamepad battery usage
+# Disabling gyro and accelerometer if not needed may reduce gamepad battery usage
 enable = true
 name = "Sony Computer Entertainment Wireless Controller Motion Sensors"
 vendor_id = 0x54c
@@ -26,11 +26,10 @@ product_id = 0x5c4
 version = 0x8111
 
 [behavior]
-# A DS4 evdev usually also provices TL2/TR2 button derived from analog trigger press
-# axis.digitrigger_thresh defined the press and release points for activation
+# A DS4 evdev usually also provides TL2/TR2 button derived from analog trigger press
 simulate_digital_trigger = true
 
-[button_map]
+[buttons]
 south = "south"
 east = "east"
 north = "north"
@@ -41,16 +40,16 @@ left_shoulder = "tl"
 right_shoulder = "tr"
 left_stick = "thumbl"
 right_stick = "thumbr"
-# steam button
+# Steam button
 guide = "mode"
-# quick access button
+# Quick access button
 misc1 = "base"
 left_paddle1 = 0x224 # BTN_GRIPL
 right_paddle1 = 0x225 # BTN_GRIPR
 left_paddle2 = 0x226 # BTN_GRIPL2
 right_paddle2 = 0x227 # BTN_GRIPR2
 
-[axis_map]
+[axes]
 left_trigger = { code = "z", out_range = [0,255], digitrigger_button = "tl2", digitrigger_thresh = [0.8,0.75] }
 right_trigger = { code = "rz", out_range = [0,255], digitrigger_button = "tr2", digitrigger_thresh = [0.8,0.75] }
 leftx = { code = "x", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
@@ -59,7 +58,7 @@ lefty = { code = "y", out_range = [0,255], from_range = [-32768,-32768,32767], t
 righty = { code = "ry", out_range = [0,255], from_range = [-32768,-32768,32767], to_range = [0,0,255] }
 
 [hats]
-# map hats by index
+# Map hats by index
 0 = ["hat0x","hat0y"]
 
 [sticks]

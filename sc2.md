@@ -1,3 +1,27 @@
+# Steam Controller 2026 udev rules
+
+On Linux you need to have udev rules set for the Steam Controller so it can be fully accessed by normal users.
+
+Installing Steam will automatically install these udev rules, else add these udev rules (sourced from steam installer):
+
+```
+# Valve USB devices
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="28de", MODE="0660", TAG+="uaccess"
+
+# Steam Controller udev write access
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+# Valve HID devices over USB hidraw
+KERNEL=="hidraw*", ATTRS{idVendor}=="28de", MODE="0660", TAG+="uaccess"
+
+# Valve HID devices over bluetooth hidraw
+KERNEL=="hidraw*", KERNELS=="*28DE:*", MODE="0660", TAG+="uaccess"
+```
+
+e.g. into a file under /etc/udev.d/rules/
+
+After adding the udev rules or installing Steam, either run `sudo udevadm control --reload-rules && sudo udevadm trigger` or reboot to apply the udev rules.
+
 # Steam Controller 2026 exposed button/axes as of sdl3-to-evdev 0.1 and SDL 3.4.10
 
 SDL 3.4.10 default mapping:
